@@ -1,8 +1,10 @@
-﻿namespace AirportSim.Simulator.Domain.Interfaces
+﻿using System.Threading.Tasks;
+
+namespace AirportSim.Simulator.Domain.Interfaces
 {
     public interface IRandom
     {
-        int GetInteger(int min,int max);
-        bool GetBoolean();
+        Task<int> GetIntegerAsync(int min,int max);
+        Task<bool> GetBooleanAsync();
     }
 }

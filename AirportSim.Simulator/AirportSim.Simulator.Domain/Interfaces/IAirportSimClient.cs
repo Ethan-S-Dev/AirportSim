@@ -1,16 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using AirportSim.Simulator.Domain.Models;
 using System.Threading.Tasks;
 
 namespace AirportSim.Simulator.Domain.Interfaces
 {
     public interface IAirportSimClient
     {
-        bool SendLanding();
-        bool SendTackoff();
-        bool SendFire();
-        bool Send
+        Task<bool> SendLandingAsync(Airplane airplane);
+        Task<bool> SendTackoffAsync(Airplane airplane);
+        Task<bool> SendFireAsync(int trackNumber);
+        Task<bool> SendCrackAsync(int trackNumber);
+        Task<bool> SendEmergencyLandingAsync(Airplane airplane);
+        Task<int[]> GetTrackIndexesAsync();
+
     }
 }

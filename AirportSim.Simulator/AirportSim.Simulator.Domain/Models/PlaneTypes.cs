@@ -1,4 +1,6 @@
-﻿using System;
+﻿using AirportSim.Simulator.Domain.Interfaces;
+using System;
+using System.Threading.Tasks;
 
 namespace AirportSim.Simulator.Domain.Models
 {
@@ -7,10 +9,9 @@ namespace AirportSim.Simulator.Domain.Models
         public const string Default = "Planey The Big Plane";
         public const string Type1 = "Airbus A380";
 
-        private static readonly Random rnd = new(); 
-        public static string GetRandomType()
+        public static async Task<string> GetRandomTypeAsync(IRandom random)
         {
-            return rnd.Next(1) switch
+            return await random.GetIntegerAsync(0,1) switch
             {
                 0 => Type1,
                 _ => Default,

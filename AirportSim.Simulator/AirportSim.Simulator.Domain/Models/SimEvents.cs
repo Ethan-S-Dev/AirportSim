@@ -6,11 +6,12 @@ using System.Threading.Tasks;
 
 namespace AirportSim.Simulator.Domain.Models
 {
-    public enum Events
+    public enum SimEvents
     {
         Land,
         Takeoff,
         Fire,
-
+        Crack,
+        EmergencyLanding
     }
 }
