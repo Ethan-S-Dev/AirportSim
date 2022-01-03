@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AirportSim.Simulator.Domain\AirportSim.Simulator.Domain.csproj" />
+    <ProjectReference Include="..\AirportSim.Simulator.Infra.AirportControl\AirportSim.Simulator.Infra.AirportControl.csproj" />
     <ProjectReference Include="..\AirportSim.Simulator.Infra.Random\AirportSim.Simulator.Infra.Random.csproj" />
   </ItemGroup>
 

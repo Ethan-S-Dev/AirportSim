@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirportSim.Simulator.Infra.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirportSim.Simulator.Infra.Random", "AirportSim.Simulator.Infra.Random\AirportSim.Simulator.Infra.Random.csproj", "{52A69FF9-1EE5-44EA-9D82-AFAB7EE53459}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirportSim.Simulator.Infra.AirportControl", "AirportSim.Simulator.Infra.AirportControl\AirportSim.Simulator.Infra.AirportControl.csproj", "{8A8F7339-E18E-4F17-A207-71A0B1023C73}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{52A69FF9-1EE5-44EA-9D82-AFAB7EE53459}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{52A69FF9-1EE5-44EA-9D82-AFAB7EE53459}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{52A69FF9-1EE5-44EA-9D82-AFAB7EE53459}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A8F7339-E18E-4F17-A207-71A0B1023C73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A8F7339-E18E-4F17-A207-71A0B1023C73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A8F7339-E18E-4F17-A207-71A0B1023C73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A8F7339-E18E-4F17-A207-71A0B1023C73}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

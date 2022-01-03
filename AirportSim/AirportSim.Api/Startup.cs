@@ -1,3 +1,7 @@
+using AirportSim.Api.Hubs;
+using AirportSim.Application.Interfaces;
+using AirportSim.Application.Services;
+using AirportSim.Domain.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -19,12 +23,15 @@ namespace AirportSim.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-
+            services.AddSingleton<IHubService, HubService>();
+            services.AddSingleton<IControlTower, ControlTower>();
             services.AddControllers();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "AirportSim.Api", Version = "v1" });
             });
+
+            services.AddSignalR();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -44,6 +51,7 @@ namespace AirportSim.Api
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHub<ControlTowerHub>("/towerhub");
             });
         }
     }
