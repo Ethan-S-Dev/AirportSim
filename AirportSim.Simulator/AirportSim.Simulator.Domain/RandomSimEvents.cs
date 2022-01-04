@@ -25,11 +25,11 @@ namespace AirportSim.Simulator.Domain
             return result;
         }
 
-        public async Task<int> GetRandomTrackAsync()
+        public async Task<string> GetRandomTrackAsync()
         {
-            var trackIndexes = await airportSimClient.GetTrackIndexesAsync();
-            var indexOfIndex = await random.GetIntegerAsync(0, trackIndexes.Length);
-            return trackIndexes[indexOfIndex];
+            var trackIndexes = await airportSimClient.GetTrackNamesAsync();
+            var indexOfName = await random.GetIntegerAsync(0, trackIndexes.Length);
+            return trackIndexes[indexOfName];
         }
     }
 }

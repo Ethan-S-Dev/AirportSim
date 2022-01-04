@@ -1,12 +1,23 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace AirportSim.Domain.Models
 {
     public class Airport
     {
         private readonly Dictionary<string,Station> stations;
+        private readonly ConcurrentDictionary<Guid, Airplane> airplanes;
+        private readonly Station[] departure;
+        private readonly Station[] landing;
+        private readonly Station[] eventable;
+
         public Airport()
         {
+            airplanes = new ConcurrentDictionary<Guid, Airplane>();
+
             var station1 = new Station("station1","Landing 1");
             var station2 = new Station("station2", "Landing 2");
             var station3 = new Station("station3", "Landing 3");
@@ -16,6 +27,18 @@ namespace AirportSim.Domain.Models
             var station7 = new Station("station7", "Boarding gate 2");
             var station8 = new Station("station8", "Transportation route 2");
             var station9 = new Station("station9", "Takeoff");
+
+            station4.StationEventStarted += StationEventStartedHandler;
+            station5.StationEventStarted += StationEventStartedHandler;
+            station6.StationEventStarted += StationEventStartedHandler;
+            station7.StationEventStarted += StationEventStartedHandler;
+            station8.StationEventStarted += StationEventStartedHandler;
+
+            station4.StationEventEnded += StationEventEndedHandler;
+            station5.StationEventEnded += StationEventEndedHandler;
+            station6.StationEventEnded += StationEventEndedHandler;
+            station7.StationEventEnded += StationEventEndedHandler;
+            station8.StationEventEnded += StationEventEndedHandler;
 
             station1.LandStations.Add(station2);
             station2.LandStations.Add(station3);
@@ -40,23 +63,25 @@ namespace AirportSim.Domain.Models
             stations.Add("station8", station8);
             stations.Add("station9", station9);
 
-            landing = new[] { stations["station1"] };
-            departure = new[] { stations["station6"], stations["station7"] };
+            eventable = new[] { station4, station5, station6, station7, station8 };
+
+            landing = new[] { station1 };
+            departure = new[] { station6, station7 };
         }
 
-        private readonly Station[] landing;
-        public IList<Station> LandingStations
-        {
-            get
-            {
-                return landing;
-            }
-        }
+       
+        private Task StationEventStartedHandler(Station sender, StationEventArgs args) => StationEventStarted?.Invoke(sender, args);
 
-        private readonly Station[] departure;
-        public IList<Station> DepartureStations
-        {
-            get { return departure; }
-        }
+        private Task StationEventEndedHandler(Station sender, StationEventArgs args) => StationEventEnded?.Invoke(sender, args);
+
+        public IList<Station> LandingStations => landing;
+        public IDictionary<string, Station> Stations => stations;
+        public IList<Station> DepartureStations => departure;
+        public ConcurrentDictionary<Guid, Airplane> Airplanes => airplanes;
+
+        public IList<string> EventableStationNames => eventable.Select(s => s.Name).ToList();
+
+        public event StationEventHandler StationEventStarted;
+        public event StationEventHandler StationEventEnded;
     }
 }

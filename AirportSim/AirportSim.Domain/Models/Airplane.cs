@@ -16,6 +16,7 @@ namespace AirportSim.Domain.Models
         public Airplane Airplane { get; set; }
         public DateTimeOffset Time { get; set; }
     }
+
     public class Airplane
     {
         public Guid Id { get; set; }
@@ -39,30 +40,49 @@ namespace AirportSim.Domain.Models
 
         private async Task EnterStation(Station station,Path path,CancellationTokenSource tokenSource)
         {
-            if(station == null) // End of path.. no where to go...
+            try
             {
-                tokenSource.Dispose();
-                currentTask = new List<Task>();
-                MovingStation?.Invoke(this,new MovingStationEventArgs { IsOver = true, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow , Station = null});
-                return;
+                if (station == null) // End of path.. no where to go...
+                {
+                    currentTask = new List<Task>();
+                    MovingStation?.Invoke(this, new MovingStationEventArgs { IsOver = true, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = null });
+                    return;
+                }
+
+                await station.Lock.WaitAsync(tokenSource.Token);
+                tokenSource.Cancel();
+                
+                await station.EventLock.WaitAsync(); // If there is event on station
+
+                //Entered the station
+                MovingStation?.Invoke(this, new MovingStationEventArgs { IsOver = false, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = station });
+
+
+                await Task.Delay(station.WaitTime);
+
+                MoveToNextStation(station, path);
+
             }
+            finally
+            {
+                if (tokenSource != null)
+                {
+                    ((IDisposable)tokenSource).Dispose();
+                }
+            }
+        }
 
-            await station.Semaphore.WaitAsync(tokenSource.Token);
-            tokenSource.Cancel();
-
-            MovingStation?.Invoke(this, new MovingStationEventArgs { IsOver = false, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = station });
-
-            await Task.Delay(station.WaitTime);
-
+        private void MoveToNextStation(Station station, Path path)
+        {
             var newTokenSource = new CancellationTokenSource();
 
-            if(path == Path.Landing)
-                currentTask.AddRange(station.LandStations.Select(s=> EnterStation(s,path, newTokenSource)));
+            if (path == Path.Landing)
+                currentTask.AddRange(station.LandStations.Select(s => EnterStation(s, path, newTokenSource)));
             else
                 currentTask.AddRange(station.DepartureStations.Select(s => EnterStation(s, path, newTokenSource)));
-
-            station.Semaphore.Release();
-            tokenSource.Dispose();
+          
+            station.Lock.Release();
+            station.EventLock.Release();
         }
     }
 }

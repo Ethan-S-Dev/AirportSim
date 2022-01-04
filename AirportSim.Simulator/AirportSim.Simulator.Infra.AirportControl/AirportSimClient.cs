@@ -7,12 +7,12 @@ namespace AirportSim.Simulator.Infra.AirportControl
 {
     public class AirportSimClient : IAirportSimClient
     {
-        public Task<int[]> GetTrackIndexesAsync()
+        public Task<string[]> GetTrackNamesAsync()
         {
             throw new NotImplementedException();
         }
 
-        public Task<bool> SendCrackAsync(int trackNumber)
+        public Task<bool> SendCrackAsync(string trackName)
         {
             throw new NotImplementedException();
         }
@@ -22,7 +22,7 @@ namespace AirportSim.Simulator.Infra.AirportControl
             throw new NotImplementedException();
         }
 
-        public Task<bool> SendFireAsync(int trackNumber)
+        public Task<bool> SendFireAsync(string trackName)
         {
             throw new NotImplementedException();
         }

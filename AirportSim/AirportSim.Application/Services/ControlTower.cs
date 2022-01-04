@@ -1,6 +1,7 @@
 ﻿using AirportSim.Application.Interfaces;
 using AirportSim.Domain.Interfaces;
 using AirportSim.Domain.Models;
+using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
@@ -9,19 +10,19 @@ namespace AirportSim.Application.Services
     public class ControlTower : IControlTower
     {
         private readonly IHubService hubService;
-        private readonly Airport airport;
-        private readonly ConcurrentDictionary<Airplane, Airplane> airplanes;
+        private readonly Airport airport;      
 
         public ControlTower(IHubService hubService)
         {
             this.hubService = hubService;
             airport = new Airport();
-            airplanes = new ConcurrentDictionary<Airplane,Airplane>();
+            airport.StationEventStarted += Airport_StationEventStarted;
+            airport.StationEventEnded += Airport_StationEventEnded;
         }
 
         public bool TryLand(Airplane plane)
         {
-            if(!airplanes.TryAdd(plane, plane))
+            if(!airport.Airplanes.TryAdd(plane.Id, plane))
                 return false;
             plane.MovingStation += Plane_MovingStation;
             plane.StartLanding(airport.LandingStations);
@@ -30,20 +31,50 @@ namespace AirportSim.Application.Services
 
         public bool TryDeparture(Airplane plane)
         {
-            if (!airplanes.TryAdd(plane, plane))
+            if (!airport.Airplanes.TryAdd(plane.Id, plane))
                 return false;
             plane.MovingStation += Plane_MovingStation;
             plane.StartDeparture(airport.DepartureStations);
             return true;
         }
 
+        public bool TryStartFire(string stationName,TimeSpan time)
+        {
+            if (!airport.Stations.ContainsKey(stationName))
+                return false;
+            _ = airport.Stations[stationName].DoStationEventAsync(StationEvents.Fire, time);
+            return true;
+        }
+
+        public bool TryStartCracks(string stationName, TimeSpan time)
+        {
+            if (!airport.Stations.ContainsKey(stationName))
+                return false;
+            _ = airport.Stations[stationName].DoStationEventAsync(StationEvents.Cracks, time);
+            return true;
+        }
+
         private async Task Plane_MovingStation(Airplane sender, MovingStationEventArgs args)
         {
-            if(args.IsOver)
-                airplanes.TryRemove(sender, out _);
+            Airplane toRemoved = null;
+            if (args.IsOver)            
+                airport.Airplanes.TryRemove(sender.Id, out toRemoved);
 
-            // hubService.SendUpdate();
-            // Save in database
+
+            // TODO: hubService.SendUpdate();
+            // TODO: Save in database          
+        }
+
+        private Task Airport_StationEventEnded(Station sender, StationEventArgs args)
+        {
+            // TODO: hubService.SendUpdate();
+            // TODO: Save in database  
+        }
+
+        private Task Airport_StationEventStarted(Station sender, StationEventArgs args)
+        {
+            // TODO: hubService.SendUpdate();
+            // TODO: Save in database  
         }
     }
 }

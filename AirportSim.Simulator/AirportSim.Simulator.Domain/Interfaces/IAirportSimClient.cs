@@ -7,10 +7,8 @@ namespace AirportSim.Simulator.Domain.Interfaces
     {
         Task<bool> SendLandingAsync(Airplane airplane);
         Task<bool> SendTackoffAsync(Airplane airplane);
-        Task<bool> SendFireAsync(int trackNumber);
-        Task<bool> SendCrackAsync(int trackNumber);
-        Task<bool> SendEmergencyLandingAsync(Airplane airplane);
-        Task<int[]> GetTrackIndexesAsync();
-
+        Task<bool> SendFireAsync(string trackName);
+        Task<bool> SendCrackAsync(string trackName);
+        Task<string[]> GetTrackNamesAsync();
     }
 }
