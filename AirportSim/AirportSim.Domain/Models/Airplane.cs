@@ -10,7 +10,8 @@ namespace AirportSim.Domain.Models
     public delegate Task MovingStationEventHandler(Airplane sender, MovingStationEventArgs args);
     public class MovingStationEventArgs : EventArgs
     {
-        public bool IsOver { get; set; }
+        public bool IsEntering { get; set; }
+        public bool IsExiting { get; set; }
         public Station Station { get; set; }
         public Path Objective { get; set; }
         public Airplane Airplane { get; set; }
@@ -35,17 +36,17 @@ namespace AirportSim.Domain.Models
         public void StartDeparture(IList<Station> stations)
         {
             var tokenSource = new CancellationTokenSource();
-            currentTask.AddRange(stations.Select(s => EnterStation(s, Path.Departing, tokenSource)));
+            currentTask.AddRange(stations.Select(s => EnterStation(s, Path.Departing, tokenSource,true)));
         }
 
-        private async Task EnterStation(Station station,Path path,CancellationTokenSource tokenSource)
+        private async Task EnterStation(Station station,Path path,CancellationTokenSource tokenSource,bool entering)
         {
             try
             {
                 if (station == null) // End of path.. no where to go...
                 {
                     currentTask = new List<Task>();
-                    MovingStation?.Invoke(this, new MovingStationEventArgs { IsOver = true, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = null });
+                    MovingStation?.Invoke(this, new MovingStationEventArgs { IsExiting = true, IsEntering = entering, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = null });
                     return;
                 }
 
@@ -55,7 +56,7 @@ namespace AirportSim.Domain.Models
                 await station.EventLock.WaitAsync(); // If there is event on station
 
                 //Entered the station
-                MovingStation?.Invoke(this, new MovingStationEventArgs { IsOver = false, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = station });
+                MovingStation?.Invoke(this, new MovingStationEventArgs { IsExiting = false, IsEntering = entering, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = station });
 
 
                 await Task.Delay(station.WaitTime);
@@ -77,9 +78,9 @@ namespace AirportSim.Domain.Models
             var newTokenSource = new CancellationTokenSource();
 
             if (path == Path.Landing)
-                currentTask.AddRange(station.LandStations.Select(s => EnterStation(s, path, newTokenSource)));
+                currentTask.AddRange(station.LandStations.Select(s => EnterStation(s, path, newTokenSource,false)));
             else
-                currentTask.AddRange(station.DepartureStations.Select(s => EnterStation(s, path, newTokenSource)));
+                currentTask.AddRange(station.DepartureStations.Select(s => EnterStation(s, path, newTokenSource,false)));
           
             station.Lock.Release();
             station.EventLock.Release();

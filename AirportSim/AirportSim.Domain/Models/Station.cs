@@ -8,6 +8,7 @@ namespace AirportSim.Domain.Models
     public delegate Task StationEventHandler(Station sender, StationEventArgs args);
     public class StationEventArgs : EventArgs
     {
+        public Guid EventId { get; set; }
         public Station Station { get; set;}
         public DateTimeOffset Time { get; set; }
         public StationEvents EventType { get; set; }
@@ -18,9 +19,7 @@ namespace AirportSim.Domain.Models
     {
         public event StationEventHandler StationEventStarted;
         public event StationEventHandler StationEventEnded;
-        public Station(string name, string displayName) : this(new TimeSpan(0, 0, 5), name, displayName)
-        { }
-        public Station(TimeSpan waitTime, string name, string displayName)
+        public Station(TimeSpan waitTime, string name, string displayName,bool isEventable, bool isLandable, bool isDepartable)
         {
             Lock = new SemaphoreSlim(1);
             EventLock = new SemaphoreSlim(1);
@@ -30,21 +29,42 @@ namespace AirportSim.Domain.Models
             WaitTime = waitTime;
             Name = name;
             DisplayName = displayName;
+
+            IsEventable = isEventable;
+            IsDepartable = isDepartable;
+            IsLandable = isLandable;
         }
-        public List<Station> LandStations { get; set; }
-        public List<Station> DepartureStations { get; set; }
+        public List<Station> LandStations { get; }
+        public List<Station> DepartureStations { get; }
         public SemaphoreSlim Lock { get; }
         public SemaphoreSlim EventLock { get; }
         public TimeSpan WaitTime { get; }
         public string Name { get; }
         public string DisplayName { get; }
-        public async Task DoStationEventAsync(StationEvents eventType,TimeSpan eventTime)
+        public async Task DoStationEventAsync(Guid eventId,StationEvents eventType,TimeSpan eventTime)
         {
             await EventLock.WaitAsync();
-            StationEventStarted?.Invoke(this,new StationEventArgs { EventTime = eventTime,EventType = eventType,Station = this,Time = DateTimeOffset.UtcNow });
+            StationEventStarted?.Invoke(this,new StationEventArgs 
+            {
+                EventId = eventId,
+                EventTime = eventTime,
+                EventType = eventType,
+                Station = this,
+                Time = DateTimeOffset.UtcNow 
+            });
             await Task.Delay(eventTime);
-            StationEventEnded?.Invoke(this, new StationEventArgs { EventTime = eventTime, EventType = eventType, Station = this, Time = DateTimeOffset.UtcNow });
+            StationEventEnded?.Invoke(this, new StationEventArgs 
+            {
+                EventId = eventId,
+                EventTime = eventTime, 
+                EventType = eventType, 
+                Station = this, 
+                Time = DateTimeOffset.UtcNow 
+            });
             EventLock.Release();
-        } 
+        }
+        public bool IsEventable { get; }
+        public bool IsLandable { get; }
+        public bool IsDepartable { get; }
     }
 }
