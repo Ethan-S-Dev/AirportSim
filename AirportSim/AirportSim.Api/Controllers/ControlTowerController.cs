@@ -1,8 +1,6 @@
 ﻿using AirportSim.Api.Contracts;
 using AirportSim.Application.Interfaces;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 
 namespace AirportSim.Api.Controllers
@@ -19,17 +17,33 @@ namespace AirportSim.Api.Controllers
         }
 
         [HttpPost("land")]
-        public IActionResult LandAirplane(AirplaneDto airplane)
+        public async Task<IActionResult> LandAirplane(AirplaneDto airplane)
         {
-            if (controlTower.TryLand(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
+            if (await controlTower.TryLandAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
                 return Ok();
             return BadRequest();
         }
 
         [HttpPost("departure")]
-        public IActionResult DepartureAirplane(AirplaneDto airplane)
+        public async Task<IActionResult> DepartureAirplane(AirplaneDto airplane)
         {
-            if (controlTower.TryDeparture(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
+            if (await controlTower.TryDepartureAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
+                return Ok();
+            return BadRequest();
+        }
+
+        [HttpPost("events/fire")]
+        public async Task<IActionResult> StartFire(StationEventDto stationEvent)
+        {
+            if (await controlTower.TryStartFireAsync(stationEvent.Name, stationEvent.Time))
+                return Ok();
+            return BadRequest();
+        }
+
+        [HttpPost("events/cracks")]
+        public async Task<IActionResult> StartCracks(StationEventDto stationEvent)
+        {
+            if (await controlTower.TryStartCracksAsync(stationEvent.Name, stationEvent.Time))
                 return Ok();
             return BadRequest();
         }

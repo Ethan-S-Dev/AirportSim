@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AirportSim.Domain.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace AirportSim.Domain.Models
         public TimeSpan EventTime { get; set; }
 
     }
-    public class Station 
+    public class Station : IStation
     {
         public event StationEventHandler StationEventStarted;
         public event StationEventHandler StationEventEnded;
@@ -41,7 +42,7 @@ namespace AirportSim.Domain.Models
         public TimeSpan WaitTime { get; }
         public string Name { get; }
         public string DisplayName { get; }
-        public async Task DoStationEventAsync(Guid eventId,StationEvents eventType,TimeSpan eventTime)
+        public async Task StartStationEventAsync(Guid eventId,StationEvents eventType,TimeSpan eventTime)
         {
             await EventLock.WaitAsync();
             StationEventStarted?.Invoke(this,new StationEventArgs 
@@ -63,6 +64,22 @@ namespace AirportSim.Domain.Models
             });
             EventLock.Release();
         }
+
+        async Task IStation.ContinueStationEventAsync(Guid eventId, StationEvents eventType, TimeSpan eventTime)
+        {
+            await EventLock.WaitAsync();
+            await Task.Delay(eventTime);
+            StationEventEnded?.Invoke(this, new StationEventArgs
+            {
+                EventId = eventId,
+                EventTime = eventTime,
+                EventType = eventType,
+                Station = this,
+                Time = DateTimeOffset.UtcNow
+            });
+            EventLock.Release();
+        }
+
         public bool IsEventable { get; }
         public bool IsLandable { get; }
         public bool IsDepartable { get; }

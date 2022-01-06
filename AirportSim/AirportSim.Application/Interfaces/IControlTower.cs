@@ -6,7 +6,7 @@ namespace AirportSim.Application.Interfaces
 {
     public interface IControlTower
     {
-        void LoadAirportState();
+        Task LoadAirportStateAsync();
         Task<bool> TryLandAsync(Airplane plane);
         Task<bool> TryDepartureAsync(Airplane plane);
         Task<bool> TryStartFireAsync(string stationName, TimeSpan time);

@@ -7,12 +7,13 @@ namespace AirportSim.Domain.Interfaces
 {
     public interface IAirportRepository
     {
-        Task AddPlaneAsync(Airplane plane);
+        Task AddPlaneAsync(Airplane plane, Path landing);
         Task AddStationEventAsync(Station stationName,Guid eventId, StationEvents fire, TimeSpan time);
-        Task RemovePlaneAsync(Airplane toRemoved);
-        Task MovePlaneToStationAsync(Airplane sender, Station station);
+        Task MovePlaneStationsAsync(Airplane sender, Station priviewsStation, Station nextStation);
+        Task RemovePlaneFromStationAsync(Airplane sender, Station priviewsStation);
+        Task EnterPlaneToStationAsync(Airplane sender, Station nextStation);
         Task StartStationEventAsync(Station sender, Guid eventId);
         Task RemoveStationEventAsync(Station sender, Guid eventId);
-        (IEnumerable<Station>, IEnumerable<Airplane>) LoadStationsAndPlanes();
+        Task<IAirport> CreateAirportWithStatreAsync();
     }
 }

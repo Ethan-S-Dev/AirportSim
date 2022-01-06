@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AirportSim.Domain.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -18,10 +19,14 @@ namespace AirportSim.Domain.Models
         public DateTimeOffset Time { get; set; }
     }
 
-    public class Airplane
+    public class Airplane : IPlane
     {
         public Guid Id { get; set; }
         public string Type { get; set; }
+
+        public bool IsOutside { get; set; }
+
+        public Station CurrentStation { get; set; }
 
         private List<Task> currentTask = new List<Task>();
 
@@ -30,15 +35,18 @@ namespace AirportSim.Domain.Models
         public void StartLanding(IList<Station> stations)
         {
             var tokenSource = new CancellationTokenSource();
-            currentTask.AddRange(stations.Select(s => EnterStation(s,Path.Landing, tokenSource)));
+            currentTask.AddRange(stations.Select(s => EnterStation(s,Path.Landing, tokenSource,true)));
         }
-
         public void StartDeparture(IList<Station> stations)
         {
             var tokenSource = new CancellationTokenSource();
             currentTask.AddRange(stations.Select(s => EnterStation(s, Path.Departing, tokenSource,true)));
         }
-
+        Task IPlane.EnterStation(Station station, Path path, bool entering)
+        {
+            var tokenSource = new CancellationTokenSource();
+            return EnterStation(station, path, tokenSource, entering);
+        }
         private async Task EnterStation(Station station,Path path,CancellationTokenSource tokenSource,bool entering)
         {
             try
@@ -51,8 +59,8 @@ namespace AirportSim.Domain.Models
                 }
 
                 await station.Lock.WaitAsync(tokenSource.Token);
-                tokenSource.Cancel();
-                
+                tokenSource.Cancel();   
+
                 await station.EventLock.WaitAsync(); // If there is event on station
 
                 //Entered the station
@@ -72,15 +80,26 @@ namespace AirportSim.Domain.Models
                 }
             }
         }
-
         private void MoveToNextStation(Station station, Path path)
         {
             var newTokenSource = new CancellationTokenSource();
 
             if (path == Path.Landing)
-                currentTask.AddRange(station.LandStations.Select(s => EnterStation(s, path, newTokenSource,false)));
+            {
+                var tasks = station.LandStations.Select(s => EnterStation(s, path, newTokenSource, false));
+                if (tasks.Any())
+                    currentTask.AddRange(tasks);
+                else
+                    currentTask.Add(EnterStation(null, path, newTokenSource, false));
+            }
             else
-                currentTask.AddRange(station.DepartureStations.Select(s => EnterStation(s, path, newTokenSource,false)));
+            {
+                var tasks = station.DepartureStations.Select(s => EnterStation(s, path, newTokenSource, false));
+                if (tasks.Any())
+                    currentTask.AddRange(tasks);
+                else
+                    currentTask.Add(EnterStation(null, path, newTokenSource, false));
+            }
           
             station.Lock.Release();
             station.EventLock.Release();

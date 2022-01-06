@@ -1,18 +1,21 @@
 ﻿using AirportSim.Infra.Data.Entities;
+using AirportSim.Infra.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace AirportSim.Infra.Data
 {
-    public class AirportContext : DbContext
+    public class AirportContext : DbContext , IAirportContext
     {
         public DbSet<StationEntity> Stations { get; set; }
         public DbSet<AirplaneEntity> Airplanes { get; set; }
         public DbSet<StationEventEntity> Events { get; set; }
+
+        IEnumerable<StationEntity> IAirportContext.Stations => Stations;
+        IEnumerable<AirplaneEntity> IAirportContext.Airplanes => Airplanes;
+        IEnumerable<StationEventEntity> IAirportContext.Events => Events;
 
         public AirportContext(DbContextOptions<AirportContext> options):base(options)
         {
@@ -123,5 +126,14 @@ namespace AirportSim.Infra.Data
                 IsLandable = false
             });
         }
+
+        async Task IAirportContext.AddPlaneAsync(AirplaneEntity airplaneEntity) => await Airplanes.AddAsync(airplaneEntity);
+        async Task IAirportContext.SaveChangesAsync() => await SaveChangesAsync();
+        async Task IAirportContext.AddEventAsync(StationEventEntity stationEventEntity) => await Events.AddAsync(stationEventEntity);
+        async Task<AirplaneEntity> IAirportContext.FindAirplaneAsync(Guid id) => await Airplanes.FindAsync(id);
+        async Task<StationEntity> IAirportContext.FindStationAsync(string name) => await Stations.FindAsync(name);
+        async Task<StationEventEntity> IAirportContext.FindEventAsync(Guid eventId) => await Events.FindAsync(eventId);
+        void IAirportContext.RemoveAirplane(AirplaneEntity planeEntity) => Airplanes.Remove(planeEntity);
+        void IAirportContext.RemoveEvent(StationEventEntity eventEntity) => Events.Remove(eventEntity);
     }
 }

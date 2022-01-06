@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AirportSim.Domain.Interfaces;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AirportSim.Domain.Models
 {
-    public class Airport
+    public class Airport : IAirport
     {
         private readonly IDictionary<string,Station> stations;
         private readonly ConcurrentDictionary<Guid, Airplane> airplanes;
@@ -29,19 +30,20 @@ namespace AirportSim.Domain.Models
 
             landing = stations.Where(station => station.IsLandable).ToArray();
             departure = stations.Where(station => station.IsDepartable).ToArray();
-        }
-
-       
+        }    
         private Task StationEventStartedHandler(Station sender, StationEventArgs args) => StationEventStarted?.Invoke(sender, args);
 
         private Task StationEventEndedHandler(Station sender, StationEventArgs args) => StationEventEnded?.Invoke(sender, args);
 
-        public IList<Station> LandingStations => landing;
-        public IDictionary<string, Station> Stations => stations;
-        public IList<Station> DepartureStations => departure;
-        public ConcurrentDictionary<Guid, Airplane> Airplanes => airplanes;
+        public bool TryAddAirplan(Guid id, Airplane plane) => airplanes.TryAdd(id, plane);
 
-        public IList<string> EventableStationNames => eventable.Select(s => s.Name).ToList();
+        public bool TryGetStation(string stationName, out Station station) => stations.TryGetValue(stationName, out station);
+
+        public void RemoveAirplane(Guid id) => airplanes.TryRemove(id, out _);
+
+        IList<Station> IAirport.LandingStations => landing;
+        IList<Station> IAirport.DepartureStations => departure;
+        IList<Station> IAirport.EventableStation => eventable;
 
         public event StationEventHandler StationEventStarted;
         public event StationEventHandler StationEventEnded;
