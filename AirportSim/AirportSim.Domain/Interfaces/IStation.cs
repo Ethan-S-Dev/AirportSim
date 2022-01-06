@@ -9,6 +9,6 @@ namespace AirportSim.Domain.Interfaces
 {
     public interface IStation
     {
-        Task ContinueStationEventAsync(Guid eventId, StationEvents eventType, TimeSpan eventTime);
+        Task ContinueStationEventAsync(Guid eventId, string eventType, TimeSpan eventTime);
     }
 }

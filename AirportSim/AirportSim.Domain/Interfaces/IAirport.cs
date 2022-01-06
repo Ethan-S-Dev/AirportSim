@@ -13,7 +13,7 @@ namespace AirportSim.Domain.Interfaces
         event StationEventHandler StationEventStarted;
         event StationEventHandler StationEventEnded;
 
-        bool TryAddAirplan(Guid id, Airplane plane);
+        bool TryAddAirplan(Airplane plane);
         bool TryGetStation(string stationName, out Station station);
         void RemoveAirplane(Guid id);
     }

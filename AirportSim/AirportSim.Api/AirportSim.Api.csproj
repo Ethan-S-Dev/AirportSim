@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\AirportSim.Application\AirportSim.Application.csproj" />
     <ProjectReference Include="..\AirportSim.Domain\AirportSim.Domain.csproj" />
+    <ProjectReference Include="..\AirportSim.Infra.IoC\AirportSim.Infra.IoC.csproj" />
   </ItemGroup>
 
 </Project>

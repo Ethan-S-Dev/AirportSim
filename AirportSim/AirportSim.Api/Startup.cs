@@ -1,13 +1,15 @@
 using AirportSim.Api.Hubs;
+using AirportSim.Application;
 using AirportSim.Application.Interfaces;
-using AirportSim.Application.Services;
-using AirportSim.Domain.Interfaces;
+using AirportSim.Infra.Data.Interfaces;
+using AirportSim.Infra.IoC;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using System;
 
 namespace AirportSim.Api
 {
@@ -23,20 +25,49 @@ namespace AirportSim.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IHubService, HubService>();
-            services.AddSingleton<IControlTower, ControlTower>();
+            var connectionString = Environment.GetEnvironmentVariable(Configuration["SqlServerEnvVarible"]);
+            var clientOrigin = Environment.GetEnvironmentVariable(Configuration["SignalRClientEnvVarible"]);
+
             services.AddControllers();
+            services.AddSignalR();
+
+            services.AddHubService();
+            services.AddControlTower();
+            services.AddAirportData(connectionString);
+
+            services.AddCors(setup =>
+            {
+                setup.AddPolicy("simulator", conf =>
+                {
+                    conf.WithOrigins("simulator.domain")
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
+                });
+
+                setup.AddPolicy("signalR", conf =>
+                {
+                    conf.WithOrigins(clientOrigin)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials();
+                });
+
+            });
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "AirportSim.Api", Version = "v1" });
-            });
-
-            services.AddSignalR();
+            });      
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,IAirportContext context,IControlTower controlTower)
         {
+            context.EnsureDeleted();
+            context.EnsureCreated();
+            _ = controlTower.LoadAirportStateAsync();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -44,14 +75,19 @@ namespace AirportSim.Api
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "AirportSim.Api v1"));
             }
 
+
             app.UseRouting();
+
+            app.UseCors();
 
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
-                endpoints.MapHub<ControlTowerHub>("/towerhub");
+                endpoints.MapControllers()
+                .RequireCors("simulator");
+                endpoints.MapHub<ControlTowerHub>("/towerhub")
+                .RequireCors("signalR");
             });
         }
     }

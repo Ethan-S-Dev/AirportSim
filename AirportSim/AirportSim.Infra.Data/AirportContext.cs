@@ -3,6 +3,7 @@ using AirportSim.Infra.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,14 +26,28 @@ namespace AirportSim.Infra.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<StationEntity>().HasData(
+            modelBuilder.Entity<StationEntity>()
+                .Property(s => s.DepartureStationNames)
+                .HasConversion(
+                v => JsonSerializer.Serialize(v,default),
+                v => JsonSerializer.Deserialize<List<string>>(v, default));
+
+            modelBuilder.Entity<StationEntity>()
+                .Property(s => s.LandStationNames)
+                .HasConversion(
+                v => JsonSerializer.Serialize(v, default),
+                v => JsonSerializer.Deserialize<List<string>>(v, default));
+
+            modelBuilder.Entity<StationEntity>()
+                
+                .HasData(
                 new StationEntity 
                 { 
                     Name = "station1",
                     DisplayName = "Landing 1",
-                    WaitTime = new TimeSpan(0,0,10),
+                    WaitTimeInSeconds = 10,
                     LandStationNames = new [] { "station2" },
-                    DepartureStations = new List<string>(),
+                    DepartureStationNames = Array.Empty<string>(),
                     IsDepartable = false,
                     IsEventable = false,
                     IsLandable = true
@@ -41,9 +56,9 @@ namespace AirportSim.Infra.Data
                 { 
                     Name = "station2",
                     DisplayName = "Landing 2",
-                    WaitTime = new TimeSpan(0, 0, 10),
+                    WaitTimeInSeconds = 10,
                     LandStationNames = new[] { "station3" },
-                    DepartureStations = new List<string>(),
+                    DepartureStationNames = Array.Empty<string>(),
                     IsDepartable = false,
                     IsEventable = false,
                     IsLandable = false
@@ -52,9 +67,9 @@ namespace AirportSim.Infra.Data
             { 
                 Name = "station3",
                 DisplayName = "Landing 3",
-                WaitTime = new TimeSpan(0, 0, 10),
+                WaitTimeInSeconds = 10,
                 LandStationNames = new[] { "station4" },
-                DepartureStations = new List<string>(),
+                DepartureStationNames = Array.Empty<string>(),
                 IsDepartable = false,
                 IsEventable = false,
                 IsLandable = false
@@ -63,9 +78,9 @@ namespace AirportSim.Infra.Data
             { 
                 Name = "station4",
                 DisplayName = "Runway",
-                WaitTime = new TimeSpan(0, 0, 10),
+                WaitTimeInSeconds = 10,
                 LandStationNames = new[] { "station5" },
-                DepartureStations = new[] { "station9" },
+                DepartureStationNames = new[] { "station9" },
                 IsDepartable = false,
                 IsEventable = true,
                 IsLandable = false
@@ -73,9 +88,9 @@ namespace AirportSim.Infra.Data
             new StationEntity 
             { Name = "station5",
                 DisplayName = "Transportation route 1",
-                WaitTime = new TimeSpan(0, 0, 10),
+                WaitTimeInSeconds = 10,
                 LandStationNames = new[] { "station6", "station7" },
-                DepartureStations = new List<string>(),
+                DepartureStationNames = Array.Empty<string>(),
                 IsDepartable = false,
                 IsEventable = true,
                 IsLandable = false
@@ -84,9 +99,9 @@ namespace AirportSim.Infra.Data
             { 
                 Name = "station6",
                 DisplayName = "Boarding gate 1",
-                WaitTime = new TimeSpan(0, 0, 10),
-                LandStationNames = new List<string>(),
-                DepartureStations = new[] { "station8" },
+                WaitTimeInSeconds = 10,
+                LandStationNames = Array.Empty<string>(),
+                DepartureStationNames = new[] { "station8" },
                 IsDepartable = true,
                 IsEventable = true,
                 IsLandable = false
@@ -95,9 +110,9 @@ namespace AirportSim.Infra.Data
             { 
                 Name = "station7",
                 DisplayName = "Boarding gate 2",
-                WaitTime = new TimeSpan(0, 0, 10),
-                LandStationNames = new List<string>(),
-                DepartureStations = new[] { "station8" },
+                WaitTimeInSeconds = 10,
+                LandStationNames = Array.Empty<string>(),
+                DepartureStationNames = new[] { "station8" },
                 IsDepartable = true,
                 IsEventable = true,
                 IsLandable = false
@@ -106,9 +121,9 @@ namespace AirportSim.Infra.Data
             {
                 Name = "station8",
                 DisplayName = "Transportation route 2",
-                WaitTime = new TimeSpan(0, 0, 10),
-                LandStationNames = new List<string>(),
-                DepartureStations = new[] { "station4" },
+                WaitTimeInSeconds = 10,
+                LandStationNames = Array.Empty<string>(),
+                DepartureStationNames = new[] { "station4" },
                 IsDepartable = false,
                 IsEventable = true,
                 IsLandable = false
@@ -117,9 +132,9 @@ namespace AirportSim.Infra.Data
             { 
                 Name = "station9",
                 DisplayName = "Takeoff",
-                WaitTime = new TimeSpan(0, 0, 10),
-                LandStationNames = new List<string>(),
-                DepartureStations = new List<string>(),
+                WaitTimeInSeconds = 10,
+                LandStationNames = Array.Empty<string>(),
+                DepartureStationNames = Array.Empty<string>(),
                 IsDepartable = false,
                 IsEventable = false,
                 IsLandable = false
@@ -133,6 +148,9 @@ namespace AirportSim.Infra.Data
         async Task<StationEntity> IAirportContext.FindStationAsync(string name) => await Stations.FindAsync(name);
         async Task<StationEventEntity> IAirportContext.FindEventAsync(Guid eventId) => await Events.FindAsync(eventId);
         void IAirportContext.RemoveAirplane(AirplaneEntity planeEntity) => Airplanes.Remove(planeEntity);
-        void IAirportContext.RemoveEvent(StationEventEntity eventEntity) => Events.Remove(eventEntity);       
+        void IAirportContext.RemoveEvent(StationEventEntity eventEntity) => Events.Remove(eventEntity);
+
+        void IAirportContext.EnsureCreated() => Database.EnsureCreated();
+        void IAirportContext.EnsureDeleted() => Database.EnsureDeleted();
     }
 }

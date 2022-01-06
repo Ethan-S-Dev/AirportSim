@@ -58,16 +58,16 @@ namespace AirportSim.Infra.Data
 
             return await task.Result;
         }
-        public async Task<EventDto> AddStationEventAsync(Station station, Guid eventId, StationEvents type, TimeSpan time)
+        public async Task<EventDto> AddStationEventAsync(Station station, Guid eventId, string type, TimeSpan time)
         {
             var task = new Task<Task<EventDto>>(async () =>
             {
                 var entity = new StationEventEntity
                 {
                     Id = eventId,
-                    EventTime = time,
+                    EventTimeInSeconds = time.TotalSeconds,
                     StationName = station.Name,
-                    EventType = (int)type,
+                    EventType = type,
                     IsStarted = false,
                     RecivedAt = DateTimeOffset.UtcNow
                 };
@@ -77,10 +77,10 @@ namespace AirportSim.Infra.Data
                 return new EventDto
                 {
                     Id = entity.Id,
-                    EventTime = entity.EventTime,
-                    EventType = Enum.GetName(typeof(StationEvents), type),
+                    EventTimeInSeconds = entity.EventTimeInSeconds,
+                    EventType = entity.EventType,
                     IsStarted = entity.IsStarted,
-                    RecivedAt = entity.RecivedAt,
+                    ReceivedAt = entity.RecivedAt,
                     StationName = entity.StationName
                 };
             });
@@ -95,8 +95,9 @@ namespace AirportSim.Infra.Data
         }
         public async Task<IAirport> CreateAirportWithStateAsync()
         {
+            await loopLock.WaitAsync();
             var stations = airportContext.Stations
-                .Select(se => new Station(se.WaitTime, se.Name, se.DisplayName, se.IsEventable, se.IsLandable, se.IsDepartable))
+                .Select(se => new Station(TimeSpan.FromSeconds(se.WaitTimeInSeconds), se.Name, se.DisplayName, se.IsEventable, se.IsLandable, se.IsDepartable))
                 .ToDictionary(s => s.Name);
 
             var planes = airportContext.Airplanes
@@ -116,7 +117,7 @@ namespace AirportSim.Infra.Data
                     station.LandStations.Add(landingStation);
                 }
 
-                foreach (var departureStationName in stationEntity.DepartureStations)
+                foreach (var departureStationName in stationEntity.DepartureStationNames)
                 {
                     var departureStation = stations[departureStationName];
                     station.DepartureStations.Add(departureStation);
@@ -154,8 +155,8 @@ namespace AirportSim.Infra.Data
             foreach (var stationEventEntity in startedStationEventEntities)
             {
                 var station = stations[stationEventEntity.StationName] as IStation;
-                var eventType = (StationEvents)stationEventEntity.EventType;
-                var time = stationEventEntity.EventTime;
+                var eventType = stationEventEntity.EventType;
+                var time = TimeSpan.FromSeconds(stationEventEntity.EventTimeInSeconds);
 
                 _ =  station.ContinueStationEventAsync(stationEventEntity.Id, eventType, time);
             }
@@ -186,13 +187,13 @@ namespace AirportSim.Infra.Data
                     var stationEvent = (StationEventEntity)entity;
 
                     var station = stations[stationEvent.StationName];
-                    var eventType = (StationEvents)stationEvent.EventType;
-                    var time = stationEvent.EventTime;
+                    var eventType = stationEvent.EventType;
+                    var time = TimeSpan.FromSeconds(stationEvent.EventTimeInSeconds);
 
                     _ = station.StartStationEventAsync(stationEvent.Id, eventType, time);
                 }
             }
-
+            loopLock.Release();
             return new Airport(stations.Values, planes.Values);
         }
         public async Task<AirplaneDto> MovePlaneStationsAsync(Airplane sender, Station priviewsStation, Station nextStation)
@@ -304,10 +305,10 @@ namespace AirportSim.Infra.Data
                 return new EventDto
                 {
                     Id = eventEntity.Id,
-                    EventTime = eventEntity.EventTime,
-                    EventType = Enum.GetName(typeof(StationEvents), eventEntity.EventType),
+                    EventTimeInSeconds = eventEntity.EventTimeInSeconds,
+                    EventType = eventEntity.EventType,
                     IsStarted = eventEntity.IsStarted,
-                    RecivedAt = eventEntity.RecivedAt,
+                    ReceivedAt = eventEntity.RecivedAt,
                     StationName = eventEntity.StationName,
                 };
             });
@@ -332,10 +333,10 @@ namespace AirportSim.Infra.Data
                 return new EventDto
                 {
                     Id = eventEntity.Id,
-                    EventTime = eventEntity.EventTime,
-                    EventType = Enum.GetName(typeof(StationEvents), eventEntity.EventType),
+                    EventTimeInSeconds = eventEntity.EventTimeInSeconds,
+                    EventType = eventEntity.EventType,
                     IsStarted = eventEntity.IsStarted,
-                    RecivedAt = eventEntity.RecivedAt,
+                    ReceivedAt = eventEntity.RecivedAt,
                     StationName = eventEntity.StationName,
                 };
             });
@@ -350,46 +351,41 @@ namespace AirportSim.Infra.Data
         }
         public async Task<AirportDto> GetAirportStateAsync()
         {
-            var task = new Task<AirportDto>(() =>
+            await loopLock.WaitAsync();
+
+            var airportDto = new AirportDto()
             {
-                return new AirportDto()
+                Airplanes = airportContext.Airplanes.Select(x => new AirplaneDto()
                 {
-                    Airplanes = airportContext.Airplanes.Select(x => new AirplaneDto()
-                    {
-                        Id = x.Id,
-                        CurrentStationName = x.StationName,
-                        EnteredAt = x.EnteredAt,
-                        IsOutside = x.IsOutside,
-                        Objective = Enum.GetName(typeof(Path),x.Objective),
-                        Type = x.Type
-                    }).ToList(),
-                    Events = airportContext.Events.Select(x => new EventDto()
-                    {
-                        Id = x.Id,
-                        EventTime = x.EventTime,
-                        EventType = Enum.GetName(typeof(StationEvents), x.EventType),
-                        IsStarted = x.IsStarted,
-                        RecivedAt = x.RecivedAt,
-                        StationName = x.StationName,
-                    }).ToList(),
-                    Stations = airportContext.Stations.Select(x => new StationDto()
-                    {
-                        Name = x.Name,
-                        DisplayName = x.DisplayName,
-                        CurrentPlaneId = x.CurrentPlaneId,
-                        IsEventable = x.IsEventable,
-                        WaitTime = x.WaitTime,
-                    }).ToList()
-                };
-            });
+                    Id = x.Id,
+                    CurrentStationName = x.StationName,
+                    EnteredAt = x.EnteredAt,
+                    IsOutside = x.IsOutside,
+                    Objective = Enum.GetName(typeof(Path), x.Objective),
+                    Type = x.Type
+                }).ToList(),
+                Events = airportContext.Events.Select(x => new EventDto()
+                {
+                    Id = x.Id,
+                    EventTimeInSeconds = x.EventTimeInSeconds,
+                    EventType = x.EventType,
+                    IsStarted = x.IsStarted,
+                    ReceivedAt = x.RecivedAt,
+                    StationName = x.StationName,
+                }).ToList(),
+                Stations = airportContext.Stations.Select(x => new StationDto()
+                {
+                    Name = x.Name,
+                    DisplayName = x.DisplayName,
+                    CurrentPlaneId = x.CurrentPlaneId,
+                    IsEventable = x.IsEventable,
+                    WaitTimeInSeconds = x.WaitTimeInSeconds,
+                }).ToList()
+            };
 
-            dbCommandQueue.Enqueue(task);
-
-            _ = AsyncExecutionLoop();
-
-            return await task;
+            loopLock.Release();
+            return airportDto;
         }
-
         private async Task AsyncExecutionLoop()
         {
             await loopLock.WaitAsync();

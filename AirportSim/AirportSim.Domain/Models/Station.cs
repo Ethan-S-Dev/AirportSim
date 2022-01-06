@@ -12,7 +12,7 @@ namespace AirportSim.Domain.Models
         public Guid EventId { get; set; }
         public Station Station { get; set;}
         public DateTimeOffset Time { get; set; }
-        public StationEvents EventType { get; set; }
+        public string EventType { get; set; }
         public TimeSpan EventTime { get; set; }
 
     }
@@ -42,7 +42,7 @@ namespace AirportSim.Domain.Models
         public TimeSpan WaitTime { get; }
         public string Name { get; }
         public string DisplayName { get; }
-        public async Task StartStationEventAsync(Guid eventId,StationEvents eventType,TimeSpan eventTime)
+        public async Task StartStationEventAsync(Guid eventId,string eventType,TimeSpan eventTime)
         {
             await EventLock.WaitAsync();
             StationEventStarted?.Invoke(this,new StationEventArgs 
@@ -65,7 +65,7 @@ namespace AirportSim.Domain.Models
             EventLock.Release();
         }
 
-        async Task IStation.ContinueStationEventAsync(Guid eventId, StationEvents eventType, TimeSpan eventTime)
+        async Task IStation.ContinueStationEventAsync(Guid eventId, string eventType, TimeSpan eventTime)
         {
             await EventLock.WaitAsync();
             await Task.Delay(eventTime);

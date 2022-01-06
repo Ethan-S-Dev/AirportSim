@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AirportSim.Domain", "Airpor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AirportSim.Application", "AirportSim.Application\AirportSim.Application.csproj", "{1BA7F20E-0F1B-4322-9788-BEDC94C19C3B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirportSim.Infra.Data", "AirportSim.Infra.Data\AirportSim.Infra.Data.csproj", "{862B550B-8599-4277-8A0E-E85C7D773B10}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AirportSim.Infra.Data", "AirportSim.Infra.Data\AirportSim.Infra.Data.csproj", "{862B550B-8599-4277-8A0E-E85C7D773B10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AirportSim.Infra.IoC", "AirportSim.Infra.IoC\AirportSim.Infra.IoC.csproj", "{0869760A-AF21-48DC-BF72-5FEA762B0A80}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{862B550B-8599-4277-8A0E-E85C7D773B10}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{862B550B-8599-4277-8A0E-E85C7D773B10}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{862B550B-8599-4277-8A0E-E85C7D773B10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0869760A-AF21-48DC-BF72-5FEA762B0A80}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0869760A-AF21-48DC-BF72-5FEA762B0A80}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0869760A-AF21-48DC-BF72-5FEA762B0A80}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0869760A-AF21-48DC-BF72-5FEA762B0A80}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

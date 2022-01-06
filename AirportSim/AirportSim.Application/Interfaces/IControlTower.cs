@@ -8,10 +8,9 @@ namespace AirportSim.Application.Interfaces
     public interface IControlTower
     {
         Task LoadAirportStateAsync();
-        Task<bool> TryLandAsync(Airplane plane);
-        Task<bool> TryDepartureAsync(Airplane plane);
-        Task<bool> TryStartFireAsync(string stationName, TimeSpan time);
-        Task<bool> TryStartCracksAsync(string stationName, TimeSpan time);
+        Task<(bool IsSuccess, string Message)> TryLandAsync(Airplane plane);
+        Task<(bool IsSuccess, string Message)> TryDepartureAsync(Airplane plane);
+        Task<(bool IsSuccess, string Message)> TryStartEventAsync(string eventType, string stationName, TimeSpan timeSpan);
         Task<AirportDto> GetAirportStateAsync();
     }
 }

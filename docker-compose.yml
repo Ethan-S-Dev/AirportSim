@@ -1,0 +1,21 @@
+version: '3.5'
+
+services:
+  mssql:
+    image: mcr.microsoft.com/mssql/server
+    container_name: mssql
+    volumes: 
+      - mssql_volume:/var/opt/mssql
+    restart: always
+    environment:
+      SA_PASSWORD: Pa55!W0rd
+      ACCEPT_EULA: Y
+    networks:
+      - airportsim_network
+
+networks: 
+  airportsim_network:
+    driver: bridge
+
+volumes: 
+  mssql_volume: {}

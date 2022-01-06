@@ -1,6 +1,7 @@
 ﻿using AirportSim.Api.Contracts;
 using AirportSim.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using System;
 using System.Threading.Tasks;
 
 namespace AirportSim.Api.Controllers
@@ -19,33 +20,31 @@ namespace AirportSim.Api.Controllers
         [HttpPost("land")]
         public async Task<IActionResult> LandAirplane(AirplaneRequest airplane)
         {
-            if (await controlTower.TryLandAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
-                return Ok();
-            return BadRequest();
+            var result = await controlTower.TryLandAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type });
+            if (result.IsSuccess)
+                return Ok(result.Message);
+            return BadRequest(result.Message);
         }
 
         [HttpPost("departure")]
         public async Task<IActionResult> DepartureAirplane(AirplaneRequest airplane)
         {
-            if (await controlTower.TryDepartureAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
-                return Ok();
-            return BadRequest();
+            var result = await controlTower.TryDepartureAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type });
+            if (result.IsSuccess)
+                return Ok(result.Message);
+            return BadRequest(result.Message);
         }
 
-        [HttpPost("events/fire")]
-        public async Task<IActionResult> StartFire(StationEventRequest stationEvent)
+        [HttpPost("event")]
+        public async Task<IActionResult> StartEvent(StationEventRequest stationEvent)
         {
-            if (await controlTower.TryStartFireAsync(stationEvent.Name, stationEvent.Time))
-                return Ok();
-            return BadRequest();
+            var result = await controlTower.TryStartEventAsync(stationEvent.EventType,
+                stationEvent.StationName,
+                TimeSpan.FromSeconds(stationEvent.EventTimeInSeconds));
+            if (result.IsSuccess)
+                return Ok(result.Message);
+            return BadRequest(result.Message);
         }
 
-        [HttpPost("events/cracks")]
-        public async Task<IActionResult> StartCracks(StationEventRequest stationEvent)
-        {
-            if (await controlTower.TryStartCracksAsync(stationEvent.Name, stationEvent.Time))
-                return Ok();
-            return BadRequest();
-        }
     }
 }

@@ -13,8 +13,8 @@ namespace AirportSim.Infra.Data.Entities
     {
         [Key]
         public Guid Id { get; set; }
-        public int EventType { get; set; }
-        public TimeSpan EventTime { get; set; }
+        public string EventType { get; set; }
+        public double EventTimeInSeconds { get; set; }
         public DateTimeOffset RecivedAt { get; set; }
         public bool IsStarted { get; set; }
         public string StationName { get; set; }

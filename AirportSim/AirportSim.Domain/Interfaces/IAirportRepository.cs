@@ -8,7 +8,7 @@ namespace AirportSim.Domain.Interfaces
     public interface IAirportRepository
     {
         Task<AirplaneDto> AddPlaneAsync(Airplane plane, Path landing);
-        Task<EventDto> AddStationEventAsync(Station stationName,Guid eventId, StationEvents fire, TimeSpan time);
+        Task<EventDto> AddStationEventAsync(Station stationName,Guid eventId, string eventType, TimeSpan time);
         Task<AirplaneDto> MovePlaneStationsAsync(Airplane sender, Station priviewsStation, Station nextStation);
         Task<AirplaneDto> RemovePlaneFromStationAsync(Airplane sender, Station priviewsStation);
         Task<AirplaneDto> EnterPlaneToStationAsync(Airplane sender, Station nextStation);

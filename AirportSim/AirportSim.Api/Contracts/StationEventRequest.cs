@@ -1,10 +1,14 @@
-﻿using System;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace AirportSim.Api.Contracts
 {
     public class StationEventRequest
     {
-        public string Name { get; set; }
-        public TimeSpan Time { get; set; }
+        [Required]
+        public string EventType { get; set; }
+        [Required]
+        public string StationName { get; set; }
+        [Required]
+        public double EventTimeInSeconds { get; set; }
     }
 }

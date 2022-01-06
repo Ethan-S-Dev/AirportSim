@@ -35,7 +35,7 @@ namespace AirportSim.Domain.Models
 
         private Task StationEventEndedHandler(Station sender, StationEventArgs args) => StationEventEnded?.Invoke(sender, args);
 
-        public bool TryAddAirplan(Guid id, Airplane plane) => airplanes.TryAdd(id, plane);
+        public bool TryAddAirplan(Airplane plane) => airplanes.TryAdd(plane.Id, plane);
 
         public bool TryGetStation(string stationName, out Station station) => stations.TryGetValue(stationName, out station);
 

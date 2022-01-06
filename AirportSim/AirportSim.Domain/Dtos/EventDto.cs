@@ -6,8 +6,8 @@ namespace AirportSim.Domain.Dtos
     {
         public Guid Id { get; set; }
         public string EventType { get; set; }
-        public TimeSpan EventTime { get; set; }
-        public DateTimeOffset RecivedAt { get; set; }
+        public double EventTimeInSeconds { get; set; }
+        public DateTimeOffset ReceivedAt { get; set; }
         public bool IsStarted { get; set; }
         public string StationName { get; set; }
     }

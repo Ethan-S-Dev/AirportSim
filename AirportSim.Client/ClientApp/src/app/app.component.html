@@ -1,0 +1,7 @@
+<div class="connect-container" *ngIf="!isConnected">
+    <button class="btn btn-primary" (click)="connect()">Connect</button>
+</div>
+<div class="loading-container" *ngIf="isLoading">
+    <app-spinner style="font-size: 2rem;"></app-spinner>
+</div>
+<app-airport *ngIf="isConnected"></app-airport>
