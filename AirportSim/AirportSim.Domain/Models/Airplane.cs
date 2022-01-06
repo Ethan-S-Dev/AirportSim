@@ -23,15 +23,9 @@ namespace AirportSim.Domain.Models
     {
         public Guid Id { get; set; }
         public string Type { get; set; }
-
         public bool IsOutside { get; set; }
-
         public Station CurrentStation { get; set; }
-
-        private List<Task> currentTask = new List<Task>();
-
         public event MovingStationEventHandler MovingStation;
-
         public void StartLanding(IList<Station> stations)
         {
             var tokenSource = new CancellationTokenSource();
@@ -47,6 +41,7 @@ namespace AirportSim.Domain.Models
             var tokenSource = new CancellationTokenSource();
             return EnterStation(station, path, tokenSource, entering);
         }
+
         private async Task EnterStation(Station station,Path path,CancellationTokenSource tokenSource,bool entering)
         {
             try
@@ -104,5 +99,7 @@ namespace AirportSim.Domain.Models
             station.Lock.Release();
             station.EventLock.Release();
         }
+     
+        private List<Task> currentTask = new List<Task>();
     }
 }

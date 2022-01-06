@@ -2,7 +2,7 @@
 
 namespace AirportSim.Api.Contracts
 {
-    public class StationEventDto
+    public class StationEventRequest
     {
         public string Name { get; set; }
         public TimeSpan Time { get; set; }

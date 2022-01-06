@@ -1,4 +1,5 @@
 ﻿using AirportSim.Application.Interfaces;
+using AirportSim.Domain.Dtos;
 using AirportSim.Domain.Interfaces;
 using AirportSim.Domain.Models;
 using System;
@@ -28,9 +29,9 @@ namespace AirportSim.Application.Services
             if(!airport.TryAddAirplan(plane.Id, plane))
                 return false;
 
-            await airportRepository.AddPlaneAsync(plane,Path.Landing);
+            var dto = await airportRepository.AddPlaneAsync(plane,Path.Landing);
 
-            // TODO: hubService.Update();
+            await hubService.SendAirplaneEnteredAsync(dto);
 
             plane.MovingStation += Plane_MovingStation;
             plane.StartLanding(airport.LandingStations);
@@ -46,9 +47,9 @@ namespace AirportSim.Application.Services
             if (!airport.TryAddAirplan(plane.Id, plane))
                 return false;
 
-            await airportRepository.AddPlaneAsync(plane, Path.Departing);
+            var dto = await airportRepository.AddPlaneAsync(plane, Path.Departing);
 
-            // TODO: hubService.Update();
+            await hubService.SendAirplaneEnteredAsync(dto);
 
             plane.MovingStation += Plane_MovingStation;
             plane.StartDeparture(airport.DepartureStations);
@@ -65,9 +66,9 @@ namespace AirportSim.Application.Services
                 return false;
 
             var eventId = Guid.NewGuid();
-            await airportRepository.AddStationEventAsync(station,eventId, StationEvents.Fire, time);
+            var dto = await airportRepository.AddStationEventAsync(station,eventId, StationEvents.Fire, time);
 
-            // TODO: hubService.Update();
+            await hubService.SendEventEnteredAsync(dto);
 
             _ = station.StartStationEventAsync(eventId, StationEvents.Fire, time);
 
@@ -83,9 +84,9 @@ namespace AirportSim.Application.Services
                 return false;
 
             var eventId = Guid.NewGuid();
-            await airportRepository.AddStationEventAsync(station,eventId, StationEvents.Cracks, time);
+            var dto = await airportRepository.AddStationEventAsync(station,eventId, StationEvents.Cracks, time);
 
-            // TODO: hubService.Update();
+            await hubService.SendEventEnteredAsync(dto);
 
             _ = station.StartStationEventAsync(eventId, StationEvents.Cracks, time);
 
@@ -94,13 +95,13 @@ namespace AirportSim.Application.Services
 
         private async Task Plane_MovingStation(Airplane sender, MovingStationEventArgs args)
         {
-
+            AirplaneDto dto;
             if (args.IsExiting)
             {
                 airport.RemoveAirplane(sender.Id);
-                await airportRepository.RemovePlaneFromStationAsync(sender,sender.CurrentStation);
+                dto = await airportRepository.RemovePlaneFromStationAsync(sender,sender.CurrentStation);
 
-                // TODO: hubService.SendUpdate();
+                await hubService.SendAiplaneRemovedAsync(dto);
                 return;
             }
 
@@ -108,37 +109,39 @@ namespace AirportSim.Application.Services
             {
                 sender.IsOutside = false;
                 sender.CurrentStation = args.Station;
-                await airportRepository.EnterPlaneToStationAsync(sender, args.Station);
+                dto = await airportRepository.EnterPlaneToStationAsync(sender, args.Station);
 
-                // TODO: hubService.SendUpdate();
+                await hubService.SendAirplaneLandedAsync(dto);
                 return;
             }
 
 
-            await airportRepository.MovePlaneStationsAsync(sender, sender.CurrentStation, args.Station);
+            dto = await airportRepository.MovePlaneStationsAsync(sender, sender.CurrentStation, args.Station);
             sender.CurrentStation = args.Station;
 
-             // TODO: hubService.SendUpdate();
+            await hubService.SendAirplaneMovedAsync(dto);
             return;                       
         }
 
         private async Task Station_EventEnded(Station sender, StationEventArgs args)
         {
-            await airportRepository.RemoveStationEventAsync(sender, args.EventId);
+            var dto = await airportRepository.RemoveStationEventAsync(sender, args.EventId);
 
-            // TODO: hubService.SendUpdate();
+            await hubService.SendEventRemovedAsync(dto);
         }
 
         private async Task Station_EventStarted(Station sender, StationEventArgs args)
         {
-            await airportRepository.StartStationEventAsync(sender, args.EventId);
+            var dto = await airportRepository.StartStationEventAsync(sender, args.EventId);
 
-            // TODO: hubService.SendUpdate();
+            await hubService.SendEventStartedAsync(dto);
         }
 
         public async Task LoadAirportStateAsync()
         {
-           airport = await airportRepository.CreateAirportWithStatreAsync();          
+           airport = await airportRepository.CreateAirportWithStateAsync();          
         }
+
+        public Task<AirportDto> GetAirportStateAsync() => airportRepository.GetAirportStateAsync();
     }
 }

@@ -3,6 +3,7 @@ using AirportSim.Infra.Data.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AirportSim.Infra.Data
@@ -18,9 +19,7 @@ namespace AirportSim.Infra.Data
         IEnumerable<StationEventEntity> IAirportContext.Events => Events;
 
         public AirportContext(DbContextOptions<AirportContext> options):base(options)
-        {
-
-        }
+        {}
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -134,6 +133,6 @@ namespace AirportSim.Infra.Data
         async Task<StationEntity> IAirportContext.FindStationAsync(string name) => await Stations.FindAsync(name);
         async Task<StationEventEntity> IAirportContext.FindEventAsync(Guid eventId) => await Events.FindAsync(eventId);
         void IAirportContext.RemoveAirplane(AirplaneEntity planeEntity) => Airplanes.Remove(planeEntity);
-        void IAirportContext.RemoveEvent(StationEventEntity eventEntity) => Events.Remove(eventEntity);
+        void IAirportContext.RemoveEvent(StationEventEntity eventEntity) => Events.Remove(eventEntity);       
     }
 }

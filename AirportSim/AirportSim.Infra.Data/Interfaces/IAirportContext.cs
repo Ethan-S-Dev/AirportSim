@@ -19,5 +19,6 @@ namespace AirportSim.Infra.Data.Interfaces
         Task<StationEventEntity> FindEventAsync(Guid eventId);
         void RemoveAirplane(AirplaneEntity planeEntity);
         void RemoveEvent(StationEventEntity eventEntity);
+       
     }
 }

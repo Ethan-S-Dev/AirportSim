@@ -15,8 +15,8 @@ namespace AirportSim.Infra.Data.Entities
         public string DisplayName { get; set; }
         public TimeSpan WaitTime { get; set; }
         public Guid CurrentPlaneId { get; set; }
-        public virtual IEnumerable<string> LandStationNames { get; set; }
-        public virtual IEnumerable<string> DepartureStations { get; set; }
+        public IEnumerable<string> LandStationNames { get; set; }
+        public IEnumerable<string> DepartureStations { get; set; }
         public bool IsEventable { get; set; }
         public bool IsLandable { get; set; }
         public bool IsDepartable { get; set; }

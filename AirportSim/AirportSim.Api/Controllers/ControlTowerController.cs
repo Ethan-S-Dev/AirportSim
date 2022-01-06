@@ -17,7 +17,7 @@ namespace AirportSim.Api.Controllers
         }
 
         [HttpPost("land")]
-        public async Task<IActionResult> LandAirplane(AirplaneDto airplane)
+        public async Task<IActionResult> LandAirplane(AirplaneRequest airplane)
         {
             if (await controlTower.TryLandAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
                 return Ok();
@@ -25,7 +25,7 @@ namespace AirportSim.Api.Controllers
         }
 
         [HttpPost("departure")]
-        public async Task<IActionResult> DepartureAirplane(AirplaneDto airplane)
+        public async Task<IActionResult> DepartureAirplane(AirplaneRequest airplane)
         {
             if (await controlTower.TryDepartureAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type }))
                 return Ok();
@@ -33,7 +33,7 @@ namespace AirportSim.Api.Controllers
         }
 
         [HttpPost("events/fire")]
-        public async Task<IActionResult> StartFire(StationEventDto stationEvent)
+        public async Task<IActionResult> StartFire(StationEventRequest stationEvent)
         {
             if (await controlTower.TryStartFireAsync(stationEvent.Name, stationEvent.Time))
                 return Ok();
@@ -41,7 +41,7 @@ namespace AirportSim.Api.Controllers
         }
 
         [HttpPost("events/cracks")]
-        public async Task<IActionResult> StartCracks(StationEventDto stationEvent)
+        public async Task<IActionResult> StartCracks(StationEventRequest stationEvent)
         {
             if (await controlTower.TryStartCracksAsync(stationEvent.Name, stationEvent.Time))
                 return Ok();

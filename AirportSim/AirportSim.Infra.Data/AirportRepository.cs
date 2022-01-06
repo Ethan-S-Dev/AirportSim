@@ -1,12 +1,12 @@
-﻿using AirportSim.Domain.Interfaces;
+﻿using AirportSim.Domain.Dtos;
+using AirportSim.Domain.Interfaces;
 using AirportSim.Domain.Models;
 using AirportSim.Infra.Data.Entities;
 using AirportSim.Infra.Data.Interfaces;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AirportSim.Infra.Data
@@ -14,42 +14,55 @@ namespace AirportSim.Infra.Data
     public class AirportRepository : IAirportRepository
     {
         private readonly IAirportContext airportContext;
-
         private readonly ConcurrentQueue<Task> dbCommandQueue;
+        private readonly SemaphoreSlim loopLock;
 
         public AirportRepository(IAirportContext airportContext)
         {
             this.airportContext = airportContext;
-            dbCommandQueue = new ConcurrentQueue<Task>();           
+            dbCommandQueue = new ConcurrentQueue<Task>();
+            loopLock = new SemaphoreSlim(1);
         }
 
-        public async Task AddPlaneAsync(Airplane plane, Path objective)
+        public async Task<AirplaneDto> AddPlaneAsync(Airplane plane, Path objective)
         {
-            var task = new Task(async () =>
+            var task = new Task<Task<AirplaneDto>>(async () =>
             {
-                await airportContext.AddPlaneAsync(new AirplaneEntity
-                {
-                    Id = plane.Id,
-                    Type = plane.Type,
-                    Objective = (int)objective,
-                    EnteredAt = DateTimeOffset.UtcNow,
-                    IsOutside = true
-                });
-                await airportContext.SaveChangesAsync();
-            });
+                  var entity = new AirplaneEntity
+                  {
+                      Id = plane.Id,
+                      Type = plane.Type,
+                      Objective = (int)objective,
+                      EnteredAt = DateTimeOffset.UtcNow,
+                      IsOutside = true
+                  };
+                  await airportContext.AddPlaneAsync(entity);
+                  await airportContext.SaveChangesAsync();
 
+                  return new AirplaneDto
+                  {
+                      Id = entity.Id,
+                      EnteredAt = entity.EnteredAt,
+                      IsOutside = entity.IsOutside,
+                      Objective = Enum.GetName(typeof(Path), objective),
+                      Type = plane.Type,
+                      CurrentStationName = entity.StationName
+                  };
+            }); 
+            
             dbCommandQueue.Enqueue(task);
 
             _ = AsyncExecutionLoop();
 
             await task;
-        }
 
-        public async Task AddStationEventAsync(Station station, Guid eventId, StationEvents type, TimeSpan time)
+            return await task.Result;
+        }
+        public async Task<EventDto> AddStationEventAsync(Station station, Guid eventId, StationEvents type, TimeSpan time)
         {
-            var task = new Task(async () =>
+            var task = new Task<Task<EventDto>>(async () =>
             {
-                await airportContext.AddEventAsync(new StationEventEntity
+                var entity = new StationEventEntity
                 {
                     Id = eventId,
                     EventTime = time,
@@ -57,8 +70,19 @@ namespace AirportSim.Infra.Data
                     EventType = (int)type,
                     IsStarted = false,
                     RecivedAt = DateTimeOffset.UtcNow
-                });
+                };
+                await airportContext.AddEventAsync(entity);
                 await airportContext.SaveChangesAsync();
+
+                return new EventDto
+                {
+                    Id = entity.Id,
+                    EventTime = entity.EventTime,
+                    EventType = Enum.GetName(typeof(StationEvents), type),
+                    IsStarted = entity.IsStarted,
+                    RecivedAt = entity.RecivedAt,
+                    StationName = entity.StationName
+                };
             });
 
             dbCommandQueue.Enqueue(task);
@@ -66,9 +90,10 @@ namespace AirportSim.Infra.Data
             _ = AsyncExecutionLoop();
 
             await task;
-        }
 
-        public async Task<IAirport> CreateAirportWithStatreAsync()
+            return await task.Result;
+        }
+        public async Task<IAirport> CreateAirportWithStateAsync()
         {
             var stations = airportContext.Stations
                 .Select(se => new Station(se.WaitTime, se.Name, se.DisplayName, se.IsEventable, se.IsLandable, se.IsDepartable))
@@ -170,10 +195,9 @@ namespace AirportSim.Infra.Data
 
             return new Airport(stations.Values, planes.Values);
         }
-
-        public async Task MovePlaneStationsAsync(Airplane sender, Station priviewsStation, Station nextStation)
+        public async Task<AirplaneDto> MovePlaneStationsAsync(Airplane sender, Station priviewsStation, Station nextStation)
         {
-            var task = new Task(async () =>
+            var task = new Task<Task<AirplaneDto>>(async () =>
             {
                 var planeEntity = await airportContext.FindAirplaneAsync(sender.Id);
                 var oldStationEntity = await airportContext.FindStationAsync(priviewsStation.Name);
@@ -185,6 +209,16 @@ namespace AirportSim.Infra.Data
                 newStationEntity.CurrentPlaneId = planeEntity.Id;
 
                 await airportContext.SaveChangesAsync();
+
+                return new AirplaneDto
+                {
+                    Id = planeEntity.Id,
+                    CurrentStationName = planeEntity.StationName,
+                    EnteredAt = planeEntity.EnteredAt,
+                    IsOutside = planeEntity.IsOutside,
+                    Objective = Enum.GetName(typeof(Path), planeEntity.Objective),
+                    Type = planeEntity.Type
+                };
             });
 
             dbCommandQueue.Enqueue(task);
@@ -192,11 +226,12 @@ namespace AirportSim.Infra.Data
             _ = AsyncExecutionLoop();
 
             await task;
-        }
 
-        public async Task EnterPlaneToStationAsync(Airplane sender, Station nextStation)
+            return await task.Result;
+        }
+        public async Task<AirplaneDto> EnterPlaneToStationAsync(Airplane sender, Station nextStation)
         {
-            var task = new Task(async () =>
+            var task = new Task<Task<AirplaneDto>>(async () =>
             {
 
                 var planeEntity = await airportContext.FindAirplaneAsync(sender.Id);
@@ -207,8 +242,16 @@ namespace AirportSim.Infra.Data
                 planeEntity.StationName = enteredStationEntity.Name;
 
                 await airportContext.SaveChangesAsync();
-                return;
 
+                return new AirplaneDto
+                {
+                    Id = planeEntity.Id,
+                    CurrentStationName = planeEntity.StationName,
+                    EnteredAt = planeEntity.EnteredAt,
+                    IsOutside = planeEntity.IsOutside,
+                    Objective = Enum.GetName(typeof(Path), planeEntity.Objective),
+                    Type = planeEntity.Type
+                };
             });
 
             dbCommandQueue.Enqueue(task);
@@ -216,11 +259,12 @@ namespace AirportSim.Infra.Data
             _ = AsyncExecutionLoop();
 
             await task;
-        }
 
-        public async Task RemovePlaneFromStationAsync(Airplane sender, Station priviewsStation)
+            return await task.Result;
+        }
+        public async Task<AirplaneDto> RemovePlaneFromStationAsync(Airplane sender, Station priviewsStation)
         {
-            var task = new Task(async () =>
+            var task = new Task<Task<AirplaneDto>>(async () =>
             {
                 var oldStationEntity = await airportContext.FindStationAsync(priviewsStation.Name);
                 var planeEntity = await airportContext.FindAirplaneAsync(sender.Id);
@@ -228,6 +272,16 @@ namespace AirportSim.Infra.Data
                 oldStationEntity.CurrentPlaneId = Guid.Empty;
                 airportContext.RemoveAirplane(planeEntity);
                 await airportContext.SaveChangesAsync();
+
+                return new AirplaneDto
+                {
+                    Id = planeEntity.Id,
+                    CurrentStationName = planeEntity.StationName,
+                    EnteredAt = planeEntity.EnteredAt,
+                    IsOutside = planeEntity.IsOutside,
+                    Objective = Enum.GetName(typeof(Path), planeEntity.Objective),
+                    Type = planeEntity.Type
+                };
             });
 
             dbCommandQueue.Enqueue(task);
@@ -235,16 +289,27 @@ namespace AirportSim.Infra.Data
             _ = AsyncExecutionLoop();
 
             await task;
-        }
 
-        public async Task RemoveStationEventAsync(Station sender, Guid eventId)
+            return await task.Result;
+        }
+        public async Task<EventDto> RemoveStationEventAsync(Station sender, Guid eventId)
         {
-            var task = new Task(async () =>
+            var task = new Task<Task<EventDto>>(async () =>
             {
                 var eventEntity = await airportContext.FindEventAsync(eventId);
 
                 airportContext.RemoveEvent(eventEntity);
                 await airportContext.SaveChangesAsync();
+
+                return new EventDto
+                {
+                    Id = eventEntity.Id,
+                    EventTime = eventEntity.EventTime,
+                    EventType = Enum.GetName(typeof(StationEvents), eventEntity.EventType),
+                    IsStarted = eventEntity.IsStarted,
+                    RecivedAt = eventEntity.RecivedAt,
+                    StationName = eventEntity.StationName,
+                };
             });
 
             dbCommandQueue.Enqueue(task);
@@ -252,31 +317,88 @@ namespace AirportSim.Infra.Data
             _ = AsyncExecutionLoop();
 
             await task;
-        }
 
-        public async Task StartStationEventAsync(Station sender, Guid eventId)
+            return await task.Result;
+        }
+        public async Task<EventDto> StartStationEventAsync(Station sender, Guid eventId)
         {
-            var task = new Task(async () =>
+            var task = new Task<Task<EventDto>>(async () =>
             {
                 var eventEntity = await airportContext.FindEventAsync(eventId);
 
                 eventEntity.IsStarted = true;
                 await airportContext.SaveChangesAsync();
-            }); 
+
+                return new EventDto
+                {
+                    Id = eventEntity.Id,
+                    EventTime = eventEntity.EventTime,
+                    EventType = Enum.GetName(typeof(StationEvents), eventEntity.EventType),
+                    IsStarted = eventEntity.IsStarted,
+                    RecivedAt = eventEntity.RecivedAt,
+                    StationName = eventEntity.StationName,
+                };
+            });
 
             dbCommandQueue.Enqueue(task);
 
             _ = AsyncExecutionLoop();
 
             await task;
+
+            return await task.Result;
+        }
+        public async Task<AirportDto> GetAirportStateAsync()
+        {
+            var task = new Task<AirportDto>(() =>
+            {
+                return new AirportDto()
+                {
+                    Airplanes = airportContext.Airplanes.Select(x => new AirplaneDto()
+                    {
+                        Id = x.Id,
+                        CurrentStationName = x.StationName,
+                        EnteredAt = x.EnteredAt,
+                        IsOutside = x.IsOutside,
+                        Objective = Enum.GetName(typeof(Path),x.Objective),
+                        Type = x.Type
+                    }).ToList(),
+                    Events = airportContext.Events.Select(x => new EventDto()
+                    {
+                        Id = x.Id,
+                        EventTime = x.EventTime,
+                        EventType = Enum.GetName(typeof(StationEvents), x.EventType),
+                        IsStarted = x.IsStarted,
+                        RecivedAt = x.RecivedAt,
+                        StationName = x.StationName,
+                    }).ToList(),
+                    Stations = airportContext.Stations.Select(x => new StationDto()
+                    {
+                        Name = x.Name,
+                        DisplayName = x.DisplayName,
+                        CurrentPlaneId = x.CurrentPlaneId,
+                        IsEventable = x.IsEventable,
+                        WaitTime = x.WaitTime,
+                    }).ToList()
+                };
+            });
+
+            dbCommandQueue.Enqueue(task);
+
+            _ = AsyncExecutionLoop();
+
+            return await task;
         }
 
         private async Task AsyncExecutionLoop()
         {
+            await loopLock.WaitAsync();
             while (dbCommandQueue.TryDequeue(out var task))
             {
+                task.Start();
                 await task;
             }
-        }
+            loopLock.Release();
+        }            
     }
 }
