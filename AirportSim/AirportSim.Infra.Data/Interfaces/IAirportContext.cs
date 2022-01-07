@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace AirportSim.Infra.Data.Interfaces
 {
-    public interface IAirportContext
+    public interface IAirportContext : IDisposable
     {
         IEnumerable<StationEntity> Stations { get; }
         IEnumerable<AirplaneEntity> Airplanes { get; }

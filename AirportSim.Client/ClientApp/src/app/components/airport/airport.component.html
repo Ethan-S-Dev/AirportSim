@@ -1,1 +1,3 @@
-<p>airport works!</p>
+<div class="stations-container">
+    <app-station *ngFor="let station of stations" [data]="station" [ngClass]="station.name"></app-station>
+</div>
