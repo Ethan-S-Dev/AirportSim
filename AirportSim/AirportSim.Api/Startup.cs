@@ -27,9 +27,14 @@ namespace AirportSim.Api
         {
             var connectionString = Environment.GetEnvironmentVariable(Configuration["SqlServerEnvVarible"]);
             var clientOrigin = Environment.GetEnvironmentVariable(Configuration["SignalRClientEnvVarible"]);
+            var simulatorClientOrigin = Environment.GetEnvironmentVariable(Configuration["SimulatorClientEnvVarible"]);
 
             services.AddControllers();
-            services.AddSignalR();
+            services.AddSignalR(config =>
+            {
+                config.ClientTimeoutInterval = TimeSpan.FromSeconds(120);
+                config.KeepAliveInterval = TimeSpan.FromSeconds(10);
+            });
 
             services.AddHubService();
             services.AddControlTower();
@@ -39,7 +44,7 @@ namespace AirportSim.Api
             {
                 setup.AddPolicy("simulator", conf =>
                 {
-                    conf.WithOrigins("simulator.domain")
+                    conf.WithOrigins(simulatorClientOrigin)
                     .AllowAnyMethod()
                     .AllowAnyHeader()
                     .AllowCredentials();
@@ -62,8 +67,9 @@ namespace AirportSim.Api
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,IAirportContext context,IControlTower controlTower)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,IAirportContextFactory contextFactory,IControlTower controlTower)
         {
+            using var context = contextFactory.CreateAirportContext();
             context.EnsureDeleted();
             context.EnsureCreated();
             _ = controlTower.LoadAirportStateAsync();

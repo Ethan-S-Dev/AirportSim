@@ -1,4 +1,5 @@
 ﻿using AirportSim.Domain.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -80,8 +81,10 @@ namespace AirportSim.Domain.Models
             EventLock.Release();
         }
 
+
         public bool IsEventable { get; }
         public bool IsLandable { get; }
         public bool IsDepartable { get; }
+
     }
 }

@@ -1,4 +1,5 @@
 ﻿using AirportSim.Domain.Interfaces;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,12 +18,13 @@ namespace AirportSim.Domain.Models
         public Path Objective { get; set; }
         public Airplane Airplane { get; set; }
         public DateTimeOffset Time { get; set; }
+     
     }
 
     public class Airplane : IPlane
     {
-        public Guid Id { get; set; }
-        public string Type { get; set; }
+        public Guid Id { get; }
+        public string Type { get; }
         public bool IsOutside { get; set; }
         public Station CurrentStation { get; set; }
         public event MovingStationEventHandler MovingStation;
@@ -40,6 +42,12 @@ namespace AirportSim.Domain.Models
         {
             var tokenSource = new CancellationTokenSource();
             return EnterStation(station, path, tokenSource, entering);
+        }
+
+        public Airplane(Guid id,string type)
+        {
+            Id = id;
+            Type = type;
         }
 
         private async Task EnterStation(Station station,Path path,CancellationTokenSource tokenSource,bool entering)
@@ -99,7 +107,7 @@ namespace AirportSim.Domain.Models
             station.Lock.Release();
             station.EventLock.Release();
         }
-     
+
         private List<Task> currentTask = new List<Task>();
     }
 }

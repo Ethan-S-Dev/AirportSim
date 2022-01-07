@@ -13,16 +13,24 @@ namespace AirportSim.Application.Services
         private readonly IAirportRepository airportRepository;
         private IAirport airport;      
 
-        public ControlTower(IHubService hubService, IAirportRepository airportRepository)
+        public ControlTower(IHubService hubService,IAirportRepository airportRepository)
         {
             this.hubService = hubService;
-            this.airportRepository = airportRepository;                       
+            this.airportRepository = airportRepository;
         }
 
-        public async Task<(bool IsSuccess,string Message)> TryLandAsync(Airplane plane)
+        public async Task<(bool IsSuccess,string Message)> TryLandAsync(Guid id,string type)
         {
             if (airport == null)
-                return (false,"Initializing airport");
+                return (false, "Initializing airport");
+
+            if (id == Guid.Empty)
+                return (false, "Invalid id");
+
+            if (string.IsNullOrEmpty(type))
+                return (false, "Invalid type");
+
+           var plane = new Airplane(id,type);
 
             if(!airport.TryAddAirplan(plane))
                 return (false, $"Airplane with Id {plane.Id} all ready exist in the airport");
@@ -36,10 +44,18 @@ namespace AirportSim.Application.Services
        
             return (true, $"Airplane with Id {plane.Id} successfully entered airport airspace");
         }
-        public async Task<(bool IsSuccess, string Message)> TryDepartureAsync(Airplane plane)
+        public async Task<(bool IsSuccess, string Message)> TryDepartureAsync(Guid id, string type)
         {
             if (airport == null)
                 return (false, "Initializing airport"); ;
+
+            if (airport == null)
+                return (false, "Initializing airport");
+
+            if (id == Guid.Empty)
+                return (false, "Invalid id");
+
+            var plane = new Airplane(id, type);
 
             if (!airport.TryAddAirplan(plane))
                 return (false, $"Airplane with Id {plane.Id} all ready exist in the airport");
@@ -86,8 +102,8 @@ namespace AirportSim.Application.Services
             AirplaneDto dto;
             if (args.IsExiting)
             {
-                airport.RemoveAirplane(sender.Id);
                 dto = await airportRepository.RemovePlaneFromStationAsync(sender,sender.CurrentStation);
+                airport.RemoveAirplane(sender.Id);
 
                 await hubService.SendAiplaneRemovedAsync(dto);
                 return;

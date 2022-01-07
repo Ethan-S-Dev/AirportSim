@@ -1,8 +1,9 @@
-﻿using System;
+﻿using AirportSim.Domain.Interfaces;
+using System;
 
 namespace AirportSim.Domain.Dtos
 {
-    public class EventDto
+    public class EventDto : IDto
     {
         public Guid Id { get; set; }
         public string EventType { get; set; }

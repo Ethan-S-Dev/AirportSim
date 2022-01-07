@@ -20,7 +20,7 @@ namespace AirportSim.Api.Controllers
         [HttpPost("land")]
         public async Task<IActionResult> LandAirplane(AirplaneRequest airplane)
         {
-            var result = await controlTower.TryLandAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type });
+            var result = await controlTower.TryLandAsync(airplane.Id,airplane.Type);
             if (result.IsSuccess)
                 return Ok(result.Message);
             return BadRequest(result.Message);
@@ -29,7 +29,7 @@ namespace AirportSim.Api.Controllers
         [HttpPost("departure")]
         public async Task<IActionResult> DepartureAirplane(AirplaneRequest airplane)
         {
-            var result = await controlTower.TryDepartureAsync(new Domain.Models.Airplane() { Id = airplane.Id, Type = airplane.Type });
+            var result = await controlTower.TryDepartureAsync(airplane.Id,airplane.Type);
             if (result.IsSuccess)
                 return Ok(result.Message);
             return BadRequest(result.Message);
@@ -38,7 +38,9 @@ namespace AirportSim.Api.Controllers
         [HttpPost("event")]
         public async Task<IActionResult> StartEvent(StationEventRequest stationEvent)
         {
-            var result = await controlTower.TryStartEventAsync(stationEvent.EventType,
+            var result = await controlTower
+                .TryStartEventAsync(
+                stationEvent.EventType,
                 stationEvent.StationName,
                 TimeSpan.FromSeconds(stationEvent.EventTimeInSeconds));
             if (result.IsSuccess)

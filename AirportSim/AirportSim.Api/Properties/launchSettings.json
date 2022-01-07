@@ -16,7 +16,8 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
         "SIGNALR_CLIENT": "http://localhost:4200",
-        "SQL_SERVER": "Server=SHAMDALAMSHAM;Database=AirportSim.Airport.db;Trusted_Connection=True;"
+        "SQL_SERVER": "Server=SHAMDALAMSHAM;Database=AirportSim.Airport.db;Trusted_Connection=True;",
+        "SIMULATOR_CLIENT": "nonon"
       },
       "applicationUrl": "http://localhost:5000",
       "dotnetRunMessages": "true"

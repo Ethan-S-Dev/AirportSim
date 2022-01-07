@@ -1,11 +1,29 @@
 version: '3.5'
 
 services:
-  mssql:
+  airport-sim-control-tower:
+    build:
+      context: ./AirportSim
+      dockerfile: ./Dockerfile
+    container_name: airport-sim-control-tower
+    restart: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      SQL_SERVER: Server=airportsim-mssql;Database=AirportSim.db;User=sa;Password=Pa55!W0rd
+      SIGNALR_CLIENT: http://localhost:4200
+      SIMULATOR_CLIENT: non
+    ports:
+      - "5050:80"
+    depends_on: 
+      - airportsim-mssql
+    networks:
+      - airportsim_network
+
+  airportsim-mssql:
     image: mcr.microsoft.com/mssql/server
-    container_name: mssql
+    container_name: airportsim-mssql
     volumes: 
-      - mssql_volume:/var/opt/mssql
+      - airportsim_mssql_volume:/var/opt/mssql
     restart: always
     environment:
       SA_PASSWORD: Pa55!W0rd
@@ -18,4 +36,4 @@ networks:
     driver: bridge
 
 volumes: 
-  mssql_volume: {}
+  airportsim_mssql_volume: {}
