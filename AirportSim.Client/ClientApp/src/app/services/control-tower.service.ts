@@ -82,19 +82,41 @@ export class ControlTowerService {
     this.connection?.on('StartLanding',(p)=>this.startLanding(p));
     this.connection?.on('MoveStation',(p)=>this.moveStation(p));
 
-    this.connection?.on('AddEvent',(event:EventDto)=>{
-      
-    });
-    this.connection?.on('RemoveEvent',(event:EventDto)=>{
-      
-    });
-    this.connection?.on('StartEvent',(event:EventDto)=>{
-      
-    });
+    this.connection?.on('AddEvent',(e)=>this.addEvent(e));
+    this.connection?.on('RemoveEvent',(e)=>this.startEvent(e));
+    this.connection?.on('StartEvent',(e)=>{});
+  }
+
+  private addEvent(event:EventDto){
+    console.log(`Event with id: ${event.id} entered`);
+    this.eventsObservable.next([...this.events,event]);
+  }
+
+  private startEvent(event:EventDto){
+    let station = this.stations.find(s=>s.name === event.stationName);
+
+    if(!station)
+      return;
+
+    station.eventId = event.id;
+    this.stationsObservable.next(this.stations);
+  }
+
+  private removeEvent(event:EventDto){
+    let station = this.stations.find(s=>s.name === event.stationName);
+    let newEvents = this.events.filter(e=>e.id !== event.id);
+
+    if(!station)
+      return;
+
+    station.eventId = undefined;
+    this.stationsObservable.next(this.stations);
+    this.eventsObservable.next(newEvents);
   }
 
   private addPlane(plane:AirplaneDto){
     console.log(`Airplane with id: ${plane.id} entered`);
+    plane.color = this.getRandomColor();
     this.airplanesObservable.next([...this.airplanes,plane]);
   }
 
@@ -110,14 +132,16 @@ export class ControlTowerService {
   }
 
   private startLanding(plane:AirplaneDto){
+    let oldPlane = this.airplanes.find(p=>p.id === plane.id)
     let newList = this.airplanes.filter(p=>p.id !== plane.id);
     let station = this.stations.find(s=>s.name == plane.currentStationName);
 
-    if(!station)
+    if(!station || !oldPlane)
       return;
 
     console.log(`Airplane with id: ${plane.id} start on station: ${station.name}`);
     station.currentPlaneId = plane.id;
+    plane.color = oldPlane.color;
     this.airplanesObservable.next([...newList,plane]);
     this.stationsObservable.next(this.stations);
   }
@@ -128,13 +152,19 @@ export class ControlTowerService {
     let oldStation = this.stations.find(s=>s.name === oldPlane?.currentStationName);
     let newStation =  this.stations.find(s=>s.name === plane.currentStationName);
 
-    if(!newStation || !oldStation)
+    if(!newStation || !oldStation || !oldPlane)
       return;
 
     console.log(`Airplane with id: ${plane.id} moved form: ${oldStation.name} to: ${newStation.name}`);
     oldStation.currentPlaneId = undefined;
     newStation.currentPlaneId = plane.id;
+    plane.color = oldPlane.color;
     this.airplanesObservable.next([...newList,plane]);
     this.stationsObservable.next(this.stations);
+  }
+
+  private getRandomColor():string{
+    var randomColor = Math.floor(Math.random()*16777215).toString(16);
+    return `#${randomColor}`;
   }
 }

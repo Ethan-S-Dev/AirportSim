@@ -67,9 +67,8 @@ namespace AirportSim.Api
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,IAirportContextFactory contextFactory,IControlTower controlTower)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,IAirportContext context,IControlTower controlTower)
         {
-            using var context = contextFactory.CreateAirportContext();
             context.EnsureDeleted();
             context.EnsureCreated();
             _ = controlTower.LoadAirportStateAsync();

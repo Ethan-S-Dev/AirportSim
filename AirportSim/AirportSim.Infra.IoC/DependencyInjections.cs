@@ -8,13 +8,24 @@ namespace AirportSim.Infra.IoC
 {
     public static class DependencyInjections
     {
-        public static IServiceCollection AddAirportData(this IServiceCollection services,string connectionString)
+        //public static IServiceCollection AddAirportData(this IServiceCollection services,string connectionString)
+        //{
+        //    services.AddDbContextFactory<AirportContext>(options =>
+        //    {
+        //        options.UseSqlServer(connectionString);
+        //    },ServiceLifetime.Singleton);
+        //    services.AddSingleton<IAirportContextFactory,AirportContextFactory>();
+        //    services.AddSingleton<IAirportRepository, AirportRepository>();
+        //    return services;
+        //}
+
+        public static IServiceCollection AddAirportData(this IServiceCollection services, string connectionString)
         {
-            services.AddDbContextFactory<AirportContext>(options =>
+            services.AddDbContext<IAirportContext,AirportContext>(options =>
             {
                 options.UseSqlServer(connectionString);
-            },ServiceLifetime.Singleton);
-            services.AddSingleton<IAirportContextFactory,AirportContextFactory>();
+            }, ServiceLifetime.Singleton);
+            //services.AddSingleton<IAirportContextFactory, AirportContextFactory>();
             services.AddSingleton<IAirportRepository, AirportRepository>();
             return services;
         }

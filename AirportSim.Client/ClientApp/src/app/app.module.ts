@@ -6,6 +6,7 @@ import { AppComponent } from './app.component';
 import { SpinnerComponent } from './components/spinner/spinner.component';
 import { AirportComponent } from './components/airport/airport.component';
 import { StationComponent } from './components/station/station.component';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @NgModule({
   declarations: [
@@ -16,7 +17,8 @@ import { StationComponent } from './components/station/station.component';
   ],
   imports: [
     BrowserModule,
-    HttpClientModule
+    HttpClientModule,
+    FontAwesomeModule
   ],
   providers: [],
   bootstrap: [AppComponent]

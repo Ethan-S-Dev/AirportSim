@@ -18,22 +18,20 @@ namespace AirportSim.Infra.Data
     }
     public class AirportRepository : IAirportRepository
     {
-        private readonly IAirportContextFactory airportContextFactory;
+        private readonly IAirportContext airportContext;
         private readonly ILogger<IAirportRepository> logger;
         private readonly ConcurrentQueue<Task<Task<IDto>>> dbCommandQueue;
         private readonly SemaphoreSlim @lock = new(1);
 
-        public AirportRepository(IAirportContextFactory airportContextFactory, ILogger<AirportRepository> logger)
+        public AirportRepository(IAirportContext airportContext, ILogger<AirportRepository> logger)
         {
-            this.airportContextFactory = airportContextFactory;
+            this.airportContext = airportContext;
             this.logger = logger;
             dbCommandQueue = new ConcurrentQueue<Task<Task<IDto>>>();
         }
         public async Task<IAirport> CreateAirportWithStateAsync()
         {
             await @lock.WaitAsync();
-            using var airportContext = airportContextFactory.CreateAirportContext();
-
             var stations = airportContext.Stations
                 .Select(se => new Station(TimeSpan.FromSeconds(se.WaitTimeInSeconds), se.Name, se.DisplayName, se.IsEventable, se.IsLandable, se.IsDepartable))
                 .ToDictionary(s => s.Name);
@@ -135,8 +133,6 @@ namespace AirportSim.Infra.Data
         public async Task<AirportDto> GetAirportStateAsync()
         {
             await @lock.WaitAsync();
-            using var airportContext = airportContextFactory.CreateAirportContext();
-
             var airportDto = new AirportDto()
             {
                 Airplanes = airportContext.Airplanes.Select(x => new AirplaneDto()
@@ -173,8 +169,7 @@ namespace AirportSim.Infra.Data
 
         public async Task<AirplaneDto> AddPlaneAsync(Airplane plane, Path objective)
         {
-            var state = new StateObject();
-            var task = new Task<Task<IDto>>((state) => AddPlane(plane, objective, (state as StateObject).Context), state);
+            var task = new Task<Task<IDto>>(() => AddPlane(plane, objective));
 
             logger.LogDebug($"Adding AddPlane task id: {task.Id}");
             dbCommandQueue.Enqueue(task);
@@ -192,8 +187,7 @@ namespace AirportSim.Infra.Data
         }
         public async Task<EventDto> AddStationEventAsync(Station station, Guid eventId, string type, TimeSpan time)
         {
-            var state = new StateObject();
-            var task = new Task<Task<IDto>>((state) => AddEvent(station, eventId, type, time, (state as StateObject).Context), state);
+            var task = new Task<Task<IDto>>(() => AddEvent(station, eventId, type, time));
 
             logger.LogDebug($"Adding AddStationEvent task id: {task.Id}");
             dbCommandQueue.Enqueue(task);
@@ -211,8 +205,7 @@ namespace AirportSim.Infra.Data
         }
         public async Task<AirplaneDto> MovePlaneStationsAsync(Airplane sender, Station priviewsStation, Station nextStation)
         {
-            var state = new StateObject();
-            var task = new Task<Task<IDto>>((state) => MovePlane(sender, priviewsStation, nextStation,(state as StateObject).Context), state);
+            var task = new Task<Task<IDto>>(() => MovePlane(sender, priviewsStation, nextStation));
 
             logger.LogDebug($"Adding MovePlane task id: {task.Id}");
             dbCommandQueue.Enqueue(task);
@@ -230,8 +223,7 @@ namespace AirportSim.Infra.Data
         }
         public async Task<AirplaneDto> EnterPlaneToStationAsync(Airplane sender, Station nextStation)
         {
-            var state = new StateObject();
-            var task = new Task<Task<IDto>>((state) => EnterPlane(sender, nextStation,(state as StateObject).Context), state);
+            var task = new Task<Task<IDto>>(() => EnterPlane(sender, nextStation));
 
             logger.LogDebug($"Adding EnterPlane task id: {task.Id}");
             dbCommandQueue.Enqueue(task);
@@ -249,8 +241,7 @@ namespace AirportSim.Infra.Data
         }
         public async Task<AirplaneDto> RemovePlaneFromStationAsync(Airplane sender, Station priviewsStation)
         {
-            var state = new StateObject();
-            var task = new Task<Task<IDto>>((state) => RemovePlane(sender, priviewsStation,(state as StateObject).Context), state);
+            var task = new Task<Task<IDto>>(() => RemovePlane(sender, priviewsStation));
 
             logger.LogDebug($"Adding ReomvePlane task id: {task.Id}");
             dbCommandQueue.Enqueue(task);
@@ -268,8 +259,7 @@ namespace AirportSim.Infra.Data
         }
         public async Task<EventDto> RemoveStationEventAsync(Station sender, Guid eventId)
         {
-            var state = new StateObject();
-            var task = new Task<Task<IDto>>((state) => RemoveEvent(eventId,(state as StateObject).Context),state);
+            var task = new Task<Task<IDto>>(() => RemoveEvent(eventId));
 
             logger.LogDebug($"Adding RemoveStationEvent task id: {task.Id}");
             dbCommandQueue.Enqueue(task);
@@ -287,8 +277,7 @@ namespace AirportSim.Infra.Data
         }
         public async Task<EventDto> StartStationEventAsync(Station sender, Guid eventId)
         {
-            var state = new StateObject();
-            var task = new Task<Task<IDto>>((state) => StartEvent(eventId,(state as StateObject).Context), state);
+            var task = new Task<Task<IDto>>(() => StartEvent(eventId));
 
             logger.LogDebug($"Adding StartStationEvent task id: {task.Id}");
             dbCommandQueue.Enqueue(task);
@@ -310,14 +299,11 @@ namespace AirportSim.Infra.Data
             logger.LogDebug($"Asking db for task {forTask}");
             await @lock.WaitAsync();
             logger.LogDebug($"Getting db for task {forTask}");
-            using (var airportContext = airportContextFactory.CreateAirportContext())
-            {
                 while (dbCommandQueue.TryDequeue(out var task))
                 {
                     try
                     {
                         logger.LogDebug($"Starting task id: {task.Id}");
-                        (task.AsyncState as StateObject).Context = airportContext;
                         task.Start();
                         await task;
                         await task.Result;
@@ -327,13 +313,12 @@ namespace AirportSim.Infra.Data
                     {
                         logger.LogDebug($"Failed task id: {task.Id}, Because {ex.Message}");
                     }
-                }
-            }
+                }        
             logger.LogDebug($"Releasing db from task {forTask}");
             @lock.Release();
         }
 
-        private async Task<IDto> AddPlane(Airplane plane, Path objective,IAirportContext airportContext)
+        private async Task<IDto> AddPlane(Airplane plane, Path objective)
         {
             
             try
@@ -365,7 +350,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> EnterPlane(Airplane sender, Station nextStation, IAirportContext airportContext)
+        private async Task<IDto> EnterPlane(Airplane sender, Station nextStation)
         {
             try
             {
@@ -395,7 +380,7 @@ namespace AirportSim.Infra.Data
 
             return null;
         }
-        private async Task<IDto> MovePlane(Airplane sender, Station priviewsStation, Station nextStation, IAirportContext airportContext)
+        private async Task<IDto> MovePlane(Airplane sender, Station priviewsStation, Station nextStation)
         {
             try
             {
@@ -426,7 +411,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> RemovePlane(Airplane sender, Station priviewsStation, IAirportContext airportContext)
+        private async Task<IDto> RemovePlane(Airplane sender, Station priviewsStation)
         {
             try
             {
@@ -454,7 +439,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> AddEvent(Station station, Guid eventId, string type, TimeSpan time, IAirportContext airportContext)
+        private async Task<IDto> AddEvent(Station station, Guid eventId, string type, TimeSpan time)
         {
             try
             {
@@ -486,7 +471,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> StartEvent(Guid eventId, IAirportContext airportContext)
+        private async Task<IDto> StartEvent(Guid eventId)
         {
             try
             {
@@ -511,7 +496,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> RemoveEvent(Guid eventId, IAirportContext airportContext)
+        private async Task<IDto> RemoveEvent(Guid eventId)
         {
             try
             {

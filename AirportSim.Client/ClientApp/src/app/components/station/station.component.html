@@ -1,2 +1,3 @@
 <label>{{data?.displayName}}</label>
-<div *ngIf="plane">Airplane: {{plane.id}}</div>
+<fa-icon *ngIf="plane" [ngStyle]="{color:plane.color}" [icon]="faAirplane">{{plane.type}}</fa-icon>
+<fa-icon *ngIf="event" [ngStyle]="{color:event.eventType == 'Fire'?'red':'black',fontSize:50}" [icon]="event.eventType == 'Fire'?faFire:event.eventType=='Cracks'?faCracks:faFire"></fa-icon>

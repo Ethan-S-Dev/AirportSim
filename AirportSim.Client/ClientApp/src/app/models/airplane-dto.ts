@@ -11,5 +11,6 @@ export interface AirplaneDto {
     isOutside:boolean,
     objective:string,
     currentStationName?:string,
-    enteredAt:Date
+    enteredAt:Date,
+    color:string
 }
