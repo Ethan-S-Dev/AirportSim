@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using AirportSim.Simulator.Application.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 
 namespace AirportSim.Simulator.Api.Controllers
@@ -7,35 +8,61 @@ namespace AirportSim.Simulator.Api.Controllers
     [ApiController]
     public class SimulateController : ControllerBase
     {
+        private readonly ISimulator simulator;
 
-        [HttpGet("Land")]
-        public Task<IActionResult> Land()
+        public SimulateController(ISimulator simulator)
         {
-            return Task.FromResult<IActionResult>(Ok());
+            this.simulator = simulator;
         }
 
-        [HttpGet("Takeoff")]
-        public Task<IActionResult> TakeOff()
+        [HttpGet("stop")]
+        public IActionResult Stop()
         {
-            return Task.FromResult<IActionResult>(Ok());
+            simulator.Stop();
+            return Ok();
+        }
+
+        [HttpGet("start")]
+        public IActionResult Start()
+        {
+            simulator.Start();
+            return Ok();
+        }
+
+        [HttpGet("land")]
+        public async Task<IActionResult> Land()
+        {
+            var result = await simulator.SendLandAirplaneAsync();
+            if(result.IsSuccess)
+                return Ok(new { result.Message });
+            return BadRequest(new { result.Message });
+        }
+
+        [HttpGet("departure")]
+        public async Task<IActionResult> Departure()
+        {
+            var result = await simulator.SendDepartureAirplaneAsync();
+            if (result.IsSuccess)
+                return Ok(new { result.Message });
+            return BadRequest(new { result.Message });
         }
         
-        [HttpGet("Obstacle/Fire/{trackNum}")]
-        public Task<IActionResult> Fire(int trackNum)
+        [HttpGet("event/fire")]
+        public async Task<IActionResult> Fire()
         {
-            return Task.FromResult<IActionResult>(Ok());
+            var result = await simulator.SendFireEventAsync();
+            if (result.IsSuccess)
+                return Ok(new { result.Message });
+            return BadRequest(new { result.Message });
         }
 
-        [HttpGet("Obstacle/Crack/{trackNum}")]
-        public Task<IActionResult> Crack(int trackNum)
+        [HttpGet("event/cracks")]
+        public async Task<IActionResult> Cracks()
         {
-            return Task.FromResult<IActionResult>(Ok());
-        }
-
-        [HttpGet("Obstacle/EmergencyLanding")]
-        public Task<IActionResult> EmergencyLanding()
-        {
-            return Task.FromResult<IActionResult>(Ok());
+            var result = await simulator.SendCracksEventAsync();
+            if (result.IsSuccess)
+                return Ok(new { result.Message });
+            return BadRequest(new { result.Message });
         }
     }
 }

@@ -4,7 +4,8 @@
 
 export const environment = {
   production: false,
-  signalRUrl:"http://localhost:5000/towerhub"
+  signalRUrl:"http://localhost:5050/towerhub",
+  controlPanelUrl:"http://localhost:5000/api/Simulate"
 };
 
 /*

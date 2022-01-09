@@ -11,4 +11,8 @@ export class EnvironmentService {
   getSignalRUrl(){
     return environment.signalRUrl;
   }
+
+  getControlPanelUrl(){
+    return environment.controlPanelUrl;
+  }
 }

@@ -6,6 +6,6 @@ namespace AirportSim.Simulator.Domain.Interfaces
     public interface IRandomSimEvents
     {
         Task<SimEvents> GetRandomEventAsync();
-        Task<string> GetRandomTrackAsync();
+        Task<string> GetRandomStationAsync();
     }
 }

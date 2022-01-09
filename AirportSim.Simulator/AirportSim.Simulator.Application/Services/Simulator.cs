@@ -1,9 +1,10 @@
 ﻿using AirportSim.Simulator.Application.Interfaces;
+using AirportSim.Simulator.Domain;
 using AirportSim.Simulator.Domain.Interfaces;
 using AirportSim.Simulator.Domain.Models;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Timers;
+using System.Threading.Tasks;
 
 namespace AirportSim.Simulator.Application.Services
 {
@@ -13,36 +14,77 @@ namespace AirportSim.Simulator.Application.Services
         private readonly IRandomSimEvents rndSimEvent;
         private readonly IAirplaneGenerator airplaneGenerator;
         private readonly ILogger<Simulator> logger;
-        private Timer eventTimer;
+        private readonly IRandom random;
+        private RandomTimer eventTimer;
 
         public Simulator(
             IAirportSimClient simClient,
             IRandomSimEvents rndSimEvent,
             IAirplaneGenerator airplaneGenerator ,
-            ILogger<Simulator> logger)
+            ILogger<Simulator> logger,
+            IRandom random)
         {
             this.simClient = simClient;
             this.rndSimEvent = rndSimEvent;
             this.airplaneGenerator = airplaneGenerator;
             this.logger = logger;
+            this.random = random;
         }
 
         public void Init()
         {
             if (eventTimer == null)
             {
-                eventTimer = new(10000);
-                eventTimer.AutoReset = true;
+                eventTimer = new RandomTimer(random, 1, 8);
                 eventTimer.Elapsed += EventTimer_Elapsed;
             }
         }
 
-        private async void EventTimer_Elapsed(object sender, ElapsedEventArgs e)
+        public async Task<(bool IsSuccess, string Message)> SendCracksEventAsync()
+        {
+            var stationName = await rndSimEvent.GetRandomStationAsync();
+            var result = await simClient.SendEventAsync(new StationEvent { EventTimeInSeconds = 3, EventType = "Cracks", StationName = stationName });
+            return result;
+
+        }
+
+        public async Task<(bool IsSuccess, string Message)> SendDepartureAirplaneAsync()
+        {
+            var plane = await airplaneGenerator.CreateRandomPlaneAsync();
+            var result = await simClient.SendDepartureAsync(plane);
+            return result;
+        }
+
+        public async Task<(bool IsSuccess, string Message)> SendFireEventAsync()
+        {
+            var stationName = await rndSimEvent.GetRandomStationAsync();
+            var result = await simClient.SendEventAsync(new StationEvent { EventTimeInSeconds = 3, EventType = "Fire" , StationName = stationName });
+            return result;
+        }
+
+        public async Task<(bool IsSuccess, string Message)> SendLandAirplaneAsync()
+        {
+            var plane = await airplaneGenerator.CreateRandomPlaneAsync();
+            var result = await simClient.SendLandingAsync(plane);
+            return result;
+        }
+
+        public void Start()
+        {
+            eventTimer?.Start();
+        }
+
+        public void Stop()
+        {
+            eventTimer?.Stop();
+        }
+
+        private async void EventTimer_Elapsed(RandomTimer sender, RandomElapsedEventArgs e)
         {
             var chosenEvent = await rndSimEvent.GetRandomEventAsync();
             Airplane plane = null;
-            int trackNumber = -1;
-            bool result;
+            string stationName = null;
+            (bool IsSuccess, string message) result;
             switch (chosenEvent)
             {
                 case SimEvents.Land:
@@ -51,36 +93,32 @@ namespace AirportSim.Simulator.Application.Services
                     break;
                 case SimEvents.Takeoff:
                     plane = await airplaneGenerator.CreateRandomPlaneAsync();
-                    result = await simClient.SendTackoffAsync(plane);
+                    result = await simClient.SendDepartureAsync(plane);
                     break;
                 case SimEvents.Fire:
-                    trackNumber = await rndSimEvent.GetRandomTrackAsync();
-                    result = await simClient.SendFireAsync(trackNumber);
+                    stationName = await rndSimEvent.GetRandomStationAsync();
+                    result = await simClient.SendEventAsync(new StationEvent { EventTimeInSeconds = 3, EventType = "Fire", StationName = stationName } );
                     break;
-                case SimEvents.Crack:
-                    trackNumber = await rndSimEvent.GetRandomTrackAsync();
-                    result = await simClient.SendCrackAsync(trackNumber);
-                    break;
-                case SimEvents.EmergencyLanding:
-                    plane = await airplaneGenerator.CreateRandomPlaneAsync();
-                    result = await simClient.SendEmergencyLandingAsync(plane);
-                    break;
+                case SimEvents.Cracks:
+                    stationName = await rndSimEvent.GetRandomStationAsync();
+                    result = await simClient.SendEventAsync(new StationEvent { EventTimeInSeconds = 3, EventType = "Cracks", StationName = stationName });
+                    break;               
                 default:
-                    result = false;
+                    result = (false,string.Empty);
                     break;
             }
 
-            if (result)
+            if (result.IsSuccess)
             {
-                if (chosenEvent == SimEvents.Fire || chosenEvent == SimEvents.Crack)
-                    logger.LogInformation($"Event of type: {Enum.GetName(typeof(SimEvents), chosenEvent)} happend on track number {trackNumber}.");
+                if (chosenEvent == SimEvents.Fire || chosenEvent == SimEvents.Cracks)
+                    logger.LogInformation($"Event of type: {Enum.GetName(typeof(SimEvents), chosenEvent)} happend on station {stationName}.");
                 else
                     logger.LogInformation($"Event of type: {Enum.GetName(typeof(SimEvents), chosenEvent)} happend with the plane {plane}.");
             }
             else
             {
-                if (chosenEvent == SimEvents.Fire || chosenEvent == SimEvents.Crack)
-                    logger.LogInformation($"Event of type: {Enum.GetName(typeof(SimEvents), chosenEvent)} couldn't happen on track number {trackNumber}.");
+                if (chosenEvent == SimEvents.Fire || chosenEvent == SimEvents.Cracks)
+                    logger.LogInformation($"Event of type: {Enum.GetName(typeof(SimEvents), chosenEvent)} couldn't happen on track number {stationName}.");
                 else
                     logger.LogInformation($"Event of type: {Enum.GetName(typeof(SimEvents), chosenEvent)} couldn't happen with the plane {plane}.");
             }

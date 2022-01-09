@@ -5,6 +5,6 @@
         Land,
         Takeoff,
         Fire,
-        Crack
+        Cracks
     }
 }

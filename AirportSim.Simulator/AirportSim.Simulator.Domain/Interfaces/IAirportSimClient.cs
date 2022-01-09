@@ -5,10 +5,9 @@ namespace AirportSim.Simulator.Domain.Interfaces
 {
     public interface IAirportSimClient
     {
-        Task<bool> SendLandingAsync(Airplane airplane);
-        Task<bool> SendTackoffAsync(Airplane airplane);
-        Task<bool> SendFireAsync(string trackName);
-        Task<bool> SendCrackAsync(string trackName);
-        Task<string[]> GetTrackNamesAsync();
+        Task<(bool IsSuccess, string Message)> SendLandingAsync(Airplane airplane);
+        Task<(bool IsSuccess, string Message)> SendDepartureAsync(Airplane airplane);
+        Task<(bool IsSuccess, string Message)> SendEventAsync(StationEvent stationEvent);
+        Task<string[]> GetStationNamesAsync();
     }
 }

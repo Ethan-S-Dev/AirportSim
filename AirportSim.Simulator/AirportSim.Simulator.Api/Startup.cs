@@ -1,9 +1,13 @@
+using AirportSim.Simulator.Application;
+using AirportSim.Simulator.Application.Interfaces;
+using AirportSim.Simulator.Infra.IoC;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using System;
 
 namespace AirportSim.Simulator.Api
 {
@@ -18,9 +22,25 @@ namespace AirportSim.Simulator.Api
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
-        {
-
+        {      
+            services.AddRandom();
+            services.AddAirportControl();
+            services.AddSimulator();
             services.AddControllers();
+
+            var clientDomain = Environment.GetEnvironmentVariable(Configuration["clientUrlEnvVariable"]);
+
+            services.AddCors(conf =>
+            {
+                conf.AddPolicy("client", policy =>
+                {
+                    policy.WithOrigins(clientDomain)
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+                });
+            });
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "AirportSim.Simulator.Api", Version = "v1" });
@@ -28,8 +48,9 @@ namespace AirportSim.Simulator.Api
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env,ISimulator simulator)
         {
+            simulator.Init();
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -39,11 +60,14 @@ namespace AirportSim.Simulator.Api
 
             app.UseRouting();
 
+            app.UseCors();
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapControllers()
+                .RequireCors("client");
             });
         }
     }

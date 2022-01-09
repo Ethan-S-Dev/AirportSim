@@ -5,6 +5,5 @@ export interface StationDto {
     displayName:string,
     waitTimeInSeconds:number,
     currentPlaneId?:string,
-    isEventable:boolean,
-    eventId?:string
+    isEventable:boolean
 }

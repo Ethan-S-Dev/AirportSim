@@ -8,4 +8,9 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.6.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\AirportSim.Simulator.Application\AirportSim.Simulator.Application.csproj" />
+    <ProjectReference Include="..\AirportSim.Simulator.Infra.IoC\AirportSim.Simulator.Infra.IoC.csproj" />
+  </ItemGroup>
+
 </Project>

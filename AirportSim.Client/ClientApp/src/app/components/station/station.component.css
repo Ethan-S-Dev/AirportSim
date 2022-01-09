@@ -1,3 +1,10 @@
 :host {
     box-shadow: 1px 1px 2px 2px var(--shadow-black);
+    display: grid;
+    grid-template-rows: 1fr 80%;
+}
+
+.inside {
+    grid-row: 2;
+    font-size: 5em;
 }

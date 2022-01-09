@@ -1,3 +1,21 @@
 <div class="stations-container">
-    <app-station *ngFor="let station of stations" [data]="station" [ngClass]="station.name"></app-station>
+    <app-station *ngFor="let station of stations" [model]="station" [ngClass]="station.name"></app-station>
+</div>
+<div class="incoming-container">
+    <div class="incoming-events">
+        <label>Incoming Events</label>
+        <div *ngFor="let event of incomingEvents">{{event.eventType}}</div>
+    </div>
+    <div class="incoming-planes">
+        <label>Incoming Airplanes</label>
+        <div *ngFor="let plane of incomingPlanes">{{plane.type}}</div>
+    </div>
+    <div class="control-panel">
+        <button (click)="start()">Start</button>
+        <button (click)="stop()">Stop</button>
+        <button (click)="land()">Land</button>
+        <button (click)="departure()">Departure</button>
+        <button (click)="fire()">Fire</button>
+        <button (click)="cracks()">Cracks</button>
+    </div>
 </div>

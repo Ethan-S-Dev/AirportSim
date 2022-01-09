@@ -11,7 +11,6 @@
   "profiles": {
     "AirportSim.Api": {
       "commandName": "Project",
-      "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
@@ -19,7 +18,7 @@
         "SQL_SERVER": "Server=SHAMDALAMSHAM;Database=AirportSim.Airport.db;Trusted_Connection=True;",
         "SIMULATOR_CLIENT": "nonon"
       },
-      "applicationUrl": "http://localhost:5000",
+      "applicationUrl": "http://localhost:5050",
       "dotnetRunMessages": "true"
     }
   }
