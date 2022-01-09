@@ -33,14 +33,12 @@ namespace AirportSim.Infra.Data
         {
             await @lock.WaitAsync();
             var stations = airportContext.Stations
-                .Select(se => new Station(TimeSpan.FromSeconds(se.WaitTimeInSeconds), se.Name, se.DisplayName, se.IsEventable, se.IsLandable, se.IsDepartable))
+                .Select(se => new Station(TimeSpan.FromSeconds(se.WaitTimeInSeconds), se.Name, se.DisplayName, se.IsEventable, se.IsLandable, se.IsDepartable) as IStation)
                 .ToDictionary(s => s.Name);
 
             var planes = airportContext.Airplanes
-                .Select(x => new Airplane(x.Id, x.Type)
-                {
-                    IsOutside = x.IsOutside
-                }).ToDictionary(p => p.Id);
+                .Select(x => new Airplane(x.Id, x.Type,(Objectives)x.Objective, x.IsOutside) as IAirplane)
+                .ToDictionary(p => p.Id);
 
             foreach (var station in stations.Values)
             {
@@ -65,7 +63,7 @@ namespace AirportSim.Infra.Data
 
             var planeEntitiesInside = airportContext.Airplanes
                 .Where(p => !p.IsOutside)
-                .Select(p => new Tuple<AirplaneEntity, Airplane>(p, planes[p.Id]))
+                .Select(p => new Tuple<AirplaneEntity, IAirplane>(p, planes[p.Id]))
                 .ToList();
 
             var startedStationEventEntities = airportContext.Events.Where(s => s.IsStarted).ToList();
@@ -77,18 +75,22 @@ namespace AirportSim.Infra.Data
             foreach (var (entity, plane) in planeEntitiesInside)
             {
 
-                var path = (Path)entity.Objective;
-                var station = stations[entity.StationName];
+                var path = (Objectives)entity.Objective;
+                var currentStaion = stations[entity.CurrentStationName];
+                IStation privewStation = null;
+                if(entity.PreviousStationName != null)
+                    privewStation = stations[entity.PreviousStationName];
 
-                var entering = (path == Path.Departing && station.IsDepartable) || (path == Path.Landing && station.IsLandable);
-                plane.CurrentStation = station;
+                var entering = (path == Objectives.Departing && currentStaion.IsDepartable) || (path == Objectives.Landing && currentStaion.IsLandable);
+                plane.CurrentStation = currentStaion;
+                plane.PreviousStation = privewStation;
 
-                _ = (plane as IPlane).EnterStation(station, path, entering);
+                _ = (plane as ILoadPlane).EnterStation(currentStaion, path, entering);
             }
 
             foreach (var stationEventEntity in startedStationEventEntities)
             {
-                var station = stations[stationEventEntity.StationName] as IStation;
+                var station = stations[stationEventEntity.StationName] as ILoadStation;
                 var eventType = stationEventEntity.EventType;
                 var time = TimeSpan.FromSeconds(stationEventEntity.EventTimeInSeconds);
 
@@ -101,18 +103,9 @@ namespace AirportSim.Infra.Data
                 {
                     var planeEntity = (AirplaneEntity)entity;
 
-                    var objective = (Path)planeEntity.Objective;
+                    var objective = (Objectives)planeEntity.Objective;
                     var plane = planes[planeEntity.Id];
-                    if (objective == Path.Departing)
-                    {
-                        plane.StartDeparture(departableStations);
-                        continue;
-                    }
-
-                    if (objective == Path.Departing)
-                    {
-                        plane.StartLanding(landbleStations);
-                    }
+                    plane.Start(landbleStations, objective);
                     continue;
                 }
 
@@ -138,10 +131,11 @@ namespace AirportSim.Infra.Data
                 Airplanes = airportContext.Airplanes.Select(x => new AirplaneDto()
                 {
                     Id = x.Id,
-                    CurrentStationName = x.StationName,
+                    CurrentStationName = x.CurrentStationName,
+                    PreviousStationName = x.PreviousStationName,
                     EnteredAt = x.EnteredAt,
                     IsOutside = x.IsOutside,
-                    Objective = Enum.GetName(typeof(Path), x.Objective),
+                    Objective = Enum.GetName(typeof(Objectives), x.Objective),
                     Type = x.Type
                 }).ToList(),
                 Events = airportContext.Events.Select(x => new EventDto()
@@ -167,7 +161,7 @@ namespace AirportSim.Infra.Data
             return airportDto;
         }
 
-        public async Task<AirplaneDto> AddPlaneAsync(Airplane plane, Path objective)
+        public async Task<AirplaneDto> AddPlaneAsync(IAirplane plane, Objectives objective)
         {
             var task = new Task<Task<IDto>>(() => AddPlane(plane, objective));
 
@@ -185,7 +179,7 @@ namespace AirportSim.Infra.Data
             //@lock.Release();
             //return result;
         }
-        public async Task<EventDto> AddStationEventAsync(Station station, Guid eventId, string type, TimeSpan time)
+        public async Task<EventDto> AddStationEventAsync(IStation station, Guid eventId, string type, TimeSpan time)
         {
             var task = new Task<Task<IDto>>(() => AddEvent(station, eventId, type, time));
 
@@ -203,7 +197,7 @@ namespace AirportSim.Infra.Data
             //@lock.Release();
             //return result;
         }
-        public async Task<AirplaneDto> MovePlaneStationsAsync(Airplane sender, Station priviewsStation, Station nextStation)
+        public async Task<AirplaneDto> MovePlaneStationsAsync(IAirplane sender, IStation priviewsStation, IStation nextStation)
         {
             var task = new Task<Task<IDto>>(() => MovePlane(sender, priviewsStation, nextStation));
 
@@ -221,7 +215,7 @@ namespace AirportSim.Infra.Data
             //@lock.Release();
             //return result;
         }
-        public async Task<AirplaneDto> EnterPlaneToStationAsync(Airplane sender, Station nextStation)
+        public async Task<AirplaneDto> EnterPlaneToStationAsync(IAirplane sender, IStation nextStation)
         {
             var task = new Task<Task<IDto>>(() => EnterPlane(sender, nextStation));
 
@@ -239,7 +233,7 @@ namespace AirportSim.Infra.Data
             //@lock.Release();
             //return result;
         }
-        public async Task<AirplaneDto> RemovePlaneFromStationAsync(Airplane sender, Station priviewsStation)
+        public async Task<AirplaneDto> RemovePlaneFromStationAsync(IAirplane sender, IStation priviewsStation)
         {
             var task = new Task<Task<IDto>>(() => RemovePlane(sender, priviewsStation));
 
@@ -251,13 +245,8 @@ namespace AirportSim.Infra.Data
             await task;
 
             return await task.Result as AirplaneDto;
-
-            //await @lock.WaitAsync();
-            //var result = await RemovePlane(sender, priviewsStation);
-            //@lock.Release();
-            //return result;
         }
-        public async Task<EventDto> RemoveStationEventAsync(Station sender, Guid eventId)
+        public async Task<EventDto> RemoveStationEventAsync(IStation sender, Guid eventId)
         {
             var task = new Task<Task<IDto>>(() => RemoveEvent(eventId));
 
@@ -275,7 +264,7 @@ namespace AirportSim.Infra.Data
             //@lock.Release();
             //return result;
         }
-        public async Task<EventDto> StartStationEventAsync(Station sender, Guid eventId)
+        public async Task<EventDto> StartStationEventAsync(IStation sender, Guid eventId)
         {
             var task = new Task<Task<IDto>>(() => StartEvent(eventId));
 
@@ -318,7 +307,7 @@ namespace AirportSim.Infra.Data
             @lock.Release();
         }
 
-        private async Task<IDto> AddPlane(Airplane plane, Path objective)
+        private async Task<IDto> AddPlane(IAirplane plane, Objectives objective)
         {
             
             try
@@ -339,9 +328,10 @@ namespace AirportSim.Infra.Data
                     Id = entity.Id,
                     EnteredAt = entity.EnteredAt,
                     IsOutside = entity.IsOutside,
-                    Objective = Enum.GetName(typeof(Path), objective),
+                    Objective = Enum.GetName(typeof(Objectives), objective),
                     Type = plane.Type,
-                    CurrentStationName = entity.StationName
+                    CurrentStationName = entity.CurrentStationName,
+                    PreviousStationName = entity.PreviousStationName                
                 };
             }
             catch (InvalidProgramException ex)
@@ -350,7 +340,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> EnterPlane(Airplane sender, Station nextStation)
+        private async Task<IDto> EnterPlane(IAirplane sender, IStation nextStation)
         {
             try
             {
@@ -359,17 +349,17 @@ namespace AirportSim.Infra.Data
 
                 enteredStationEntity.CurrentPlaneId = planeEntity.Id;
                 planeEntity.IsOutside = sender.IsOutside;
-                planeEntity.StationName = enteredStationEntity.Name;
+                planeEntity.CurrentStationName = enteredStationEntity.Name;
 
                 await airportContext.SaveChangesAsync();
 
                 return new AirplaneDto
                 {
                     Id = planeEntity.Id,
-                    CurrentStationName = planeEntity.StationName,
+                    CurrentStationName = planeEntity.CurrentStationName,
                     EnteredAt = planeEntity.EnteredAt,
                     IsOutside = planeEntity.IsOutside,
-                    Objective = Enum.GetName(typeof(Path), planeEntity.Objective),
+                    Objective = Enum.GetName(typeof(Objectives), planeEntity.Objective),
                     Type = planeEntity.Type
                 };
             }
@@ -380,7 +370,7 @@ namespace AirportSim.Infra.Data
 
             return null;
         }
-        private async Task<IDto> MovePlane(Airplane sender, Station priviewsStation, Station nextStation)
+        private async Task<IDto> MovePlane(IAirplane sender, IStation priviewsStation, IStation nextStation)
         {
             try
             {
@@ -389,7 +379,8 @@ namespace AirportSim.Infra.Data
                 var newStationEntity = await airportContext.FindStationAsync(nextStation.Name);
 
                 oldStationEntity.CurrentPlaneId = Guid.Empty;
-                planeEntity.StationName = newStationEntity.Name;
+                planeEntity.CurrentStationName = newStationEntity.Name;
+                planeEntity.PreviousStationName = priviewsStation.Name;
                 planeEntity.IsOutside = sender.IsOutside;
                 newStationEntity.CurrentPlaneId = planeEntity.Id;
 
@@ -398,10 +389,11 @@ namespace AirportSim.Infra.Data
                 return new AirplaneDto
                 {
                     Id = planeEntity.Id,
-                    CurrentStationName = planeEntity.StationName,
+                    CurrentStationName = planeEntity.CurrentStationName,
+                    PreviousStationName = planeEntity.PreviousStationName,
                     EnteredAt = planeEntity.EnteredAt,
                     IsOutside = planeEntity.IsOutside,
-                    Objective = Enum.GetName(typeof(Path), planeEntity.Objective),
+                    Objective = Enum.GetName(typeof(Objectives), planeEntity.Objective),
                     Type = planeEntity.Type
                 };
             }
@@ -411,7 +403,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> RemovePlane(Airplane sender, Station priviewsStation)
+        private async Task<IDto> RemovePlane(IAirplane sender, IStation priviewsStation)
         {
             try
             {
@@ -419,17 +411,19 @@ namespace AirportSim.Infra.Data
                 var planeEntity = await airportContext.FindAirplaneAsync(sender.Id);
 
                 oldStationEntity.CurrentPlaneId = null;
-                planeEntity.StationName = null;
+                planeEntity.CurrentStationName = null;
+                planeEntity.PreviousStationName = priviewsStation.Name;
                 airportContext.RemoveAirplane(planeEntity);
                 await airportContext.SaveChangesAsync();
 
                 return new AirplaneDto
                 {
                     Id = planeEntity.Id,
-                    CurrentStationName = planeEntity.StationName,
+                    CurrentStationName = planeEntity.CurrentStationName,
+                    PreviousStationName= planeEntity.PreviousStationName,
                     EnteredAt = planeEntity.EnteredAt,
                     IsOutside = planeEntity.IsOutside,
-                    Objective = Enum.GetName(typeof(Path), planeEntity.Objective),
+                    Objective = Enum.GetName(typeof(Objectives), planeEntity.Objective),
                     Type = planeEntity.Type
                 };
             }
@@ -439,7 +433,7 @@ namespace AirportSim.Infra.Data
             }
             return null;
         }
-        private async Task<IDto> AddEvent(Station station, Guid eventId, string type, TimeSpan time)
+        private async Task<IDto> AddEvent(IStation station, Guid eventId, string type, TimeSpan time)
         {
             try
             {

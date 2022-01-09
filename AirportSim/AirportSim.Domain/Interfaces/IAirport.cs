@@ -6,15 +6,18 @@ namespace AirportSim.Domain.Interfaces
 {
     public interface IAirport
     {
-        IList<Station> LandingStations { get; }
-        IList<Station> DepartureStations { get; }
-        IList<Station> EventableStation { get; }
+        IList<IStation> LandingStations { get; }
+        IList<IStation> DepartureStations { get; }
+        IList<IStation> EventableStation { get; }
 
         event StationEventHandler StationEventStarted;
         event StationEventHandler StationEventEnded;
 
-        bool TryAddAirplan(Airplane plane);
-        bool TryGetStation(string stationName, out Station station);
+        bool TryAddAirplan(IAirplane plane);
+        bool TryGetStation(string stationName, out IStation station);
         void RemoveAirplane(Guid id);
+
+        bool CanLand();
+        bool CanDeparture();
     }
 }

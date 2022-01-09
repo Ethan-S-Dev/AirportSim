@@ -3,8 +3,8 @@ using System.Threading.Tasks;
 
 namespace AirportSim.Domain.Interfaces
 {
-    public interface IPlane
+    public interface ILoadPlane
     {
-        Task EnterStation(Station station, Path path, bool entering);
+        Task EnterStation(IStation station, Objectives path, bool entering);
     }
 }

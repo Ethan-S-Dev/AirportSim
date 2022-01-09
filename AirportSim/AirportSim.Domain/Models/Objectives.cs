@@ -1,6 +1,6 @@
 ﻿namespace AirportSim.Domain.Models
 {
-    public enum Path
+    public enum Objectives
     {
         Landing,
         Departing

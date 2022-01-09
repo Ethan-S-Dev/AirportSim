@@ -7,27 +7,27 @@ using System.Threading.Tasks;
 
 namespace AirportSim.Domain.Models
 {
-    public delegate Task StationEventHandler(Station sender, StationEventArgs args);
+    public delegate Task StationEventHandler(IStation sender, StationEventArgs args);
     public class StationEventArgs : EventArgs
     {
         public Guid EventId { get; set; }
-        public Station Station { get; set;}
+        public IStation Station { get; set;}
         public DateTimeOffset Time { get; set; }
         public string EventType { get; set; }
         public TimeSpan EventTime { get; set; }
 
     }
-    public class Station : IStation
+    public class Station : IStation, ILoadStation
     {
         public event StationEventHandler StationEventStarted;
         public event StationEventHandler StationEventEnded;
         public Station(TimeSpan waitTime, string name, string displayName,bool isEventable, bool isLandable, bool isDepartable)
         {
-            Lock = new SemaphoreSlim(1);
-            EventLock = new SemaphoreSlim(1);
+            stationLock = new SemaphoreSlim(1);
+            eventLock = new SemaphoreSlim(1);
 
-            LandStations = new List<Station>();
-            DepartureStations = new List<Station>();
+            LandStations = new List<IStation>();
+            DepartureStations = new List<IStation>();
             WaitTime = waitTime;
             Name = name;
             DisplayName = displayName;
@@ -36,16 +36,20 @@ namespace AirportSim.Domain.Models
             IsDepartable = isDepartable;
             IsLandable = isLandable;
         }
-        public List<Station> LandStations { get; }
-        public List<Station> DepartureStations { get; }
-        public SemaphoreSlim Lock { get; }
-        public SemaphoreSlim EventLock { get; }
+        public IList<IStation> LandStations { get; }
+        public IList<IStation> DepartureStations { get; }
         public TimeSpan WaitTime { get; }
         public string Name { get; }
         public string DisplayName { get; }
+        public bool IsEventable { get; }
+        public bool IsLandable { get; }
+        public bool IsDepartable { get; }
+
+        public int AvilableEnteries => stationLock.CurrentCount;
+
         public async Task StartStationEventAsync(Guid eventId,string eventType,TimeSpan eventTime)
         {
-            await EventLock.WaitAsync();
+            await LockEventsAsync();
             StationEventStarted?.Invoke(this,new StationEventArgs 
             {
                 EventId = eventId,
@@ -63,12 +67,16 @@ namespace AirportSim.Domain.Models
                 Station = this, 
                 Time = DateTimeOffset.UtcNow 
             });
-            EventLock.Release();
+            ReleaseEvents();
         }
+        public Task LockStationAsync(CancellationToken cancellationToken) => stationLock.WaitAsync(cancellationToken);
+        public void ReleaseStation() => stationLock.Release();
+        public Task LockEventsAsync() => eventLock.WaitAsync();
+        public void ReleaseEvents() => eventLock.Release();
 
-        async Task IStation.ContinueStationEventAsync(Guid eventId, string eventType, TimeSpan eventTime)
+        async Task ILoadStation.ContinueStationEventAsync(Guid eventId, string eventType, TimeSpan eventTime)
         {
-            await EventLock.WaitAsync();
+            await LockEventsAsync();
             await Task.Delay(eventTime);
             StationEventEnded?.Invoke(this, new StationEventArgs
             {
@@ -78,13 +86,10 @@ namespace AirportSim.Domain.Models
                 Station = this,
                 Time = DateTimeOffset.UtcNow
             });
-            EventLock.Release();
+            ReleaseEvents();
         }
 
-
-        public bool IsEventable { get; }
-        public bool IsLandable { get; }
-        public bool IsDepartable { get; }
-
+        private readonly SemaphoreSlim stationLock;
+        private readonly SemaphoreSlim eventLock;
     }
 }

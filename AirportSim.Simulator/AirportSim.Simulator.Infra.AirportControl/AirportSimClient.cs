@@ -57,7 +57,7 @@ namespace AirportSim.Simulator.Infra.AirportControl
                     return (true, message);
 
                 logger.LogWarning(message);
-                return (true, message);
+                return (false, message);
             }
             catch (HttpRequestException ex)
             {

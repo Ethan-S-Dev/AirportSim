@@ -1,74 +1,78 @@
 ﻿using AirportSim.Domain.Interfaces;
-using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace AirportSim.Domain.Models
 {
-    public delegate Task MovingStationEventHandler(Airplane sender, MovingStationEventArgs args);
+    public delegate Task MovingStationEventHandler(IAirplane sender, MovingStationEventArgs args);
     public class MovingStationEventArgs : EventArgs
     {
         public bool IsEntering { get; set; }
         public bool IsExiting { get; set; }
-        public Station Station { get; set; }
-        public Path Objective { get; set; }
-        public Airplane Airplane { get; set; }
+        public IStation Station { get; set; }
+        public Objectives Objective { get; set; }
+        public IAirplane Airplane { get; set; }
         public DateTimeOffset Time { get; set; }
      
     }
 
-    public class Airplane : IPlane
+    public class Airplane : IAirplane, ILoadPlane
     {
         public Guid Id { get; }
         public string Type { get; }
         public bool IsOutside { get; set; }
-        public Station CurrentStation { get; set; }
+        public IStation CurrentStation { get; set; }
+        public IStation PreviousStation { get; set; }
+        public Objectives Objective { get; }
         public event MovingStationEventHandler MovingStation;
-        public void StartLanding(IList<Station> stations)
+
+        public void Start(IList<IStation> stations,Objectives objective)
         {
             var tokenSource = new CancellationTokenSource();
-            currentTask.AddRange(stations.Select(s => EnterStation(s,Path.Landing, tokenSource,true)));
+            stations.Select(s => EnterStation(s, objective, tokenSource, true)).ToList();
         }
-        public void StartDeparture(IList<Station> stations)
-        {
-            var tokenSource = new CancellationTokenSource();
-            currentTask.AddRange(stations.Select(s => EnterStation(s, Path.Departing, tokenSource,true)));
-        }
-        Task IPlane.EnterStation(Station station, Path path, bool entering)
+        
+        Task ILoadPlane.EnterStation(IStation station, Objectives path, bool entering)
         {
             var tokenSource = new CancellationTokenSource();
             return EnterStation(station, path, tokenSource, entering);
         }
 
-        public Airplane(Guid id,string type)
+        public Airplane(Guid id,string type,Objectives objective,bool isOutside)
         {
             Id = id;
             Type = type;
+            Objective = objective;
+            IsOutside = isOutside;
         }
 
-        private async Task EnterStation(Station station,Path path,CancellationTokenSource tokenSource,bool entering)
+        private async Task EnterStation(IStation station,Objectives path,CancellationTokenSource tokenSource,bool entering)
         {
             try
             {
                 if (station == null) // End of path.. no where to go...
                 {
-                    currentTask = new List<Task>();
-                    MovingStation?.Invoke(this, new MovingStationEventArgs { IsExiting = true, IsEntering = entering, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = null });
+                    PreviousStation = CurrentStation;
+                    CurrentStation = station;
+                    MovingStation?.Invoke(this, new MovingStationEventArgs { IsExiting = true, IsEntering = entering, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = null });                    
+                    ReleaseStation(PreviousStation);
                     return;
                 }
 
-                await station.Lock.WaitAsync(tokenSource.Token);
+                await station.LockStationAsync(tokenSource.Token);
                 tokenSource.Cancel();   
-
-                await station.EventLock.WaitAsync(); // If there is event on station
+                await station.LockEventsAsync(); // If there is event on station                           
 
                 //Entered the station
+                PreviousStation = CurrentStation;
+                CurrentStation = station;
                 MovingStation?.Invoke(this, new MovingStationEventArgs { IsExiting = false, IsEntering = entering, Airplane = this, Objective = path, Time = DateTimeOffset.UtcNow, Station = station });
 
+                //Release the priviews
+                ReleaseStation(PreviousStation);
 
                 await Task.Delay(station.WaitTime);
 
@@ -83,31 +87,32 @@ namespace AirportSim.Domain.Models
                 }
             }
         }
-        private void MoveToNextStation(Station station, Path path)
+        private void MoveToNextStation(IStation station, Objectives path)
         {
             var newTokenSource = new CancellationTokenSource();
+            bool any = false;
+            switch (path)
+            {
+                case Objectives.Landing:
+                    any = station.LandStations.Select(s => EnterStation(s, path, newTokenSource, false)).ToList().Any();
+                    break;
+                case Objectives.Departing:
+                    any = station.DepartureStations.Select(s => EnterStation(s, path, newTokenSource, false)).ToList().Any();
+                    break;
+                default:              
+                    return;
+            }
 
-            if (path == Path.Landing)
-            {
-                var tasks = station.LandStations.Select(s => EnterStation(s, path, newTokenSource, false));
-                if (tasks.Any())
-                    currentTask.AddRange(tasks);
-                else
-                    currentTask.Add(EnterStation(null, path, newTokenSource, false));
-            }
-            else
-            {
-                var tasks = station.DepartureStations.Select(s => EnterStation(s, path, newTokenSource, false));
-                if (tasks.Any())
-                    currentTask.AddRange(tasks);
-                else
-                    currentTask.Add(EnterStation(null, path, newTokenSource, false));
-            }
-          
-            station.Lock.Release();
-            station.EventLock.Release();
+            if (!any)
+                _ = EnterStation(null, path, newTokenSource, false);
+
+
+            
         }
-
-        private List<Task> currentTask = new List<Task>();
+        private void ReleaseStation(IStation station)
+        {
+            station?.ReleaseEvents();
+            station?.ReleaseStation();
+        }      
     }
 }

@@ -10,6 +10,7 @@ namespace AirportSim.Domain.Dtos
         public bool IsOutside { get; set; }
         public string Objective { get; set; }
         public string CurrentStationName { get; set; }
+        public string PreviousStationName { get; set; }
         public DateTimeOffset EnteredAt { get; set; }
     }
 }
